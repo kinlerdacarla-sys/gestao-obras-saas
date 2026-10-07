@@ -820,7 +820,9 @@ model Document {
   projectId   String         @map("project_id") @db.Uuid
   createdBy   String         @map("created_by") @db.Uuid
   createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  dailyLogId  String         @map("daily_log_id") @db.Uuid
+  dailyLogId  String?        @map("daily_log_id") @db.Uuid
+  expenseId   String?        @map("expense_id") @db.Uuid
+  contractId  String?        @map("contract_id") @db.Uuid
   objectKey   String         @unique @map("object_key")
   fileName    String         @map("file_name")
   mimeType    String         @map("mime_type")
@@ -867,4 +869,300 @@ model DailyLogDocument {
   @@unique([tenantId, projectId, id])
   @@index([tenantId, projectId])
   @@map("daily_log_documents")
+}
+
+enum SupplierType {
+  SUPPLIER
+  SUBCONTRACTOR
+  CONSULTANT
+  SERVICE_PROVIDER
+  OTHER
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum ContractType {
+  CONSTRUCTION
+  SUBCONTRACT
+  SUPPLY
+  SERVICE
+  CONSULTANCY
+  OTHER
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  COMPLETED
+  TERMINATED
+  CANCELLED
+}
+
+enum AmendmentType {
+  ADDITION
+  OMISSION
+  TIME_EXTENSION
+  OTHER
+}
+
+enum CommercialApproval {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ExpenseStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CANCELLED
+  REVERSED
+}
+
+enum CostCenterStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ExpenseDocumentType {
+  INVOICE
+  RECEIPT
+  DELIVERY_NOTE
+  PURCHASE_ORDER
+  OTHER
+}
+
+model Supplier {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @map("tenant_id") @db.Uuid
+  organizationId String?        @map("organization_id") @db.Uuid
+  supplierType   SupplierType   @map("supplier_type")
+  legalName      String         @map("legal_name") @db.VarChar(200)
+  tradeName      String?        @map("trade_name")
+  taxNumber      String?        @map("tax_number") @db.VarChar(50)
+  email          String?
+  phone          String?
+  address        String?
+  contactPerson  String?        @map("contact_person")
+  contactPhone   String?        @map("contact_phone")
+  contactEmail   String?        @map("contact_email")
+  status         SupplierStatus @default(ACTIVE)
+  version        Int            @default(0)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy      String         @map("created_by") @db.Uuid
+  updatedBy      String         @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, organizationId])
+  @@unique([tenantId, taxNumber])
+  @@index([tenantId, status])
+  @@map("suppliers")
+}
+
+model Contract {
+  id                     String         @id @default(uuid()) @db.Uuid
+  tenantId               String         @map("tenant_id") @db.Uuid
+  projectId              String         @map("project_id") @db.Uuid
+  supplierId             String         @map("supplier_id") @db.Uuid
+  contractNumber         String         @map("contract_number") @db.VarChar(100)
+  title                  String
+  description            String?
+  contractType           ContractType   @map("contract_type")
+  originalValue          Decimal        @map("original_value") @db.Decimal(18, 2)
+  currentValue           Decimal        @map("current_value") @db.Decimal(18, 2)
+  retentionPercentage    Decimal        @default(0) @map("retention_percentage") @db.Decimal(5, 2)
+  advancePercentage      Decimal        @default(0) @map("advance_percentage") @db.Decimal(5, 2)
+  advanceAmount          Decimal        @default(0) @map("advance_amount") @db.Decimal(18, 2)
+  advanceRecoveredAmount Decimal        @default(0) @map("advance_recovered_amount") @db.Decimal(18, 2)
+  startDate              DateTime?      @map("start_date") @db.Date
+  endDate                DateTime?      @map("end_date") @db.Date
+  status                 ContractStatus @default(DRAFT)
+  amendmentSequence      Int            @default(0) @map("amendment_sequence")
+  version                Int            @default(0)
+  createdAt              DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy              String         @map("created_by") @db.Uuid
+  updatedBy              String         @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, contractNumber])
+  @@index([tenantId, projectId, status])
+  @@index([tenantId, supplierId])
+  @@map("contracts")
+}
+
+model ContractItem {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  projectId    String    @map("project_id") @db.Uuid
+  contractId   String    @map("contract_id") @db.Uuid
+  budgetItemId String?   @map("budget_item_id") @db.Uuid
+  code         String?
+  description  String
+  unit         String?
+  quantity     Decimal?  @db.Decimal(18, 4)
+  unitPrice    Decimal?  @map("unit_price") @db.Decimal(18, 2)
+  totalValue   Decimal   @map("total_value") @db.Decimal(18, 2)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+  version      Int       @default(0)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy    String    @map("created_by") @db.Uuid
+  updatedBy    String    @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, contractId])
+  @@index([tenantId, projectId, budgetItemId])
+  @@map("contract_items")
+}
+
+model ContractAmendment {
+  id              String             @id @default(uuid()) @db.Uuid
+  tenantId        String             @map("tenant_id") @db.Uuid
+  projectId       String             @map("project_id") @db.Uuid
+  contractId      String             @map("contract_id") @db.Uuid
+  amendmentNumber Int                @map("amendment_number")
+  code            String
+  amendmentType   AmendmentType      @map("amendment_type")
+  description     String
+  amount          Decimal            @db.Decimal(18, 2)
+  status          CommercialApproval @default(DRAFT)
+  effectiveDate   DateTime?          @map("effective_date") @db.Date
+  submittedBy     String?            @map("submitted_by") @db.Uuid
+  submittedAt     DateTime?          @map("submitted_at") @db.Timestamptz(6)
+  approvedBy      String?            @map("approved_by") @db.Uuid
+  approvedAt      DateTime?          @map("approved_at") @db.Timestamptz(6)
+  rejectedBy      String?            @map("rejected_by") @db.Uuid
+  rejectedAt      DateTime?          @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason String?            @map("rejection_reason")
+  version         Int                @default(0)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy       String             @map("created_by") @db.Uuid
+  updatedBy       String             @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([contractId, amendmentNumber])
+  @@index([tenantId, projectId, contractId, status])
+  @@map("contract_amendments")
+}
+
+model CostCenter {
+  id          String           @id @default(uuid()) @db.Uuid
+  tenantId    String           @map("tenant_id") @db.Uuid
+  projectId   String           @map("project_id") @db.Uuid
+  code        String           @db.VarChar(100)
+  name        String
+  description String?
+  parentId    String?          @map("parent_id") @db.Uuid
+  status      CostCenterStatus @default(ACTIVE)
+  version     Int              @default(0)
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String           @map("created_by") @db.Uuid
+  updatedBy   String           @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([projectId, code])
+  @@index([tenantId, projectId, parentId])
+  @@map("cost_centers")
+}
+
+model Expense {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  projectId       String        @map("project_id") @db.Uuid
+  expenseNumber   String        @map("expense_number") @db.VarChar(100)
+  supplierId      String?       @map("supplier_id") @db.Uuid
+  contractId      String?       @map("contract_id") @db.Uuid
+  budgetItemId    String?       @map("budget_item_id") @db.Uuid
+  costCenterId    String        @map("cost_center_id") @db.Uuid
+  expenseDate     DateTime      @map("expense_date") @db.Date
+  description     String
+  documentNumber  String?       @map("document_number")
+  subtotal        Decimal       @db.Decimal(18, 2)
+  taxAmount       Decimal       @default(0) @map("tax_amount") @db.Decimal(18, 2)
+  totalAmount     Decimal       @map("total_amount") @db.Decimal(18, 2)
+  status          ExpenseStatus @default(DRAFT)
+  submittedBy     String?       @map("submitted_by") @db.Uuid
+  submittedAt     DateTime?     @map("submitted_at") @db.Timestamptz(6)
+  approvedBy      String?       @map("approved_by") @db.Uuid
+  approvedAt      DateTime?     @map("approved_at") @db.Timestamptz(6)
+  rejectedBy      String?       @map("rejected_by") @db.Uuid
+  rejectedAt      DateTime?     @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason String?       @map("rejection_reason")
+  version         Int           @default(0)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy       String        @map("created_by") @db.Uuid
+  updatedBy       String        @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, expenseNumber])
+  @@index([tenantId, projectId, expenseDate])
+  @@index([tenantId, projectId, status])
+  @@index([tenantId, projectId, supplierId])
+  @@index([tenantId, projectId, contractId])
+  @@index([tenantId, projectId, costCenterId])
+  @@index([tenantId, projectId, budgetItemId])
+  @@map("expenses")
+}
+
+model ExpenseReversal {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  expenseId String   @unique @map("expense_id") @db.Uuid
+  reason    String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy String   @map("created_by") @db.Uuid
+  updatedBy String   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@map("expense_reversals")
+}
+
+model ExpenseDocument {
+  id           String              @id @default(uuid()) @db.Uuid
+  tenantId     String              @map("tenant_id") @db.Uuid
+  projectId    String              @map("project_id") @db.Uuid
+  expenseId    String              @map("expense_id") @db.Uuid
+  documentId   String              @unique @map("document_id") @db.Uuid
+  documentType ExpenseDocumentType @map("document_type")
+  version      Int                 @default(0)
+  createdAt    DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy    String              @map("created_by") @db.Uuid
+  updatedBy    String              @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, expenseId])
+  @@map("expense_documents")
+}
+
+model ContractDocument {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  contractId String   @map("contract_id") @db.Uuid
+  documentId String   @unique @map("document_id") @db.Uuid
+  version    Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy  String   @map("created_by") @db.Uuid
+  updatedBy  String   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, contractId])
+  @@map("contract_documents")
 }

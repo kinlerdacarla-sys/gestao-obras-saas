@@ -140,6 +140,25 @@ export function ProjectDetail({ id }: { id: string }) {
       <ProjectOverview project={project} />
       <BudgetDashboard id={id} />
       <OperationalDashboard id={id} />
+      {me.role !== "CLIENT" && (
+        <section className="card">
+          <h2>Gestão comercial</h2>
+          <nav className="budget-nav">
+            <Link href={`/projects/${id}/contracts`}>Contratos</Link>
+            {["ADMIN", "MANAGER"].includes(me.role) && (
+              <>
+                <Link href={`/projects/${id}/expenses`}>Despesas</Link>
+                <Link href={`/projects/${id}/cost-centers`}>
+                  Centros de custo
+                </Link>
+              </>
+            )}
+            {me.role !== "INSPECTOR" && (
+              <Link href={`/projects/${id}/costs`}>Custos</Link>
+            )}
+          </nav>
+        </section>
+      )}
       <ProjectParticipants
         id={id}
         participants={participants}

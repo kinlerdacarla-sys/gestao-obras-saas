@@ -46,6 +46,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <nav>
             <Link href="/dashboard">Dashboard</Link>
             <Link href="/projects">Obras</Link>
+            {["ADMIN", "MANAGER"].includes(me.role) && (
+              <Link href="/suppliers">Fornecedores</Link>
+            )}
             <span aria-disabled="true">Relatórios · em breve</span>
             {me.role === "ADMIN" && (
               <>

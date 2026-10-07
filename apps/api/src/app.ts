@@ -20,6 +20,13 @@ import { completeBudgetDocs } from "./budget/docs.js";
 import { BudgetModule } from "./budget/budget.module.js";
 import { ScheduleModule } from "./schedule/schedule.module.js";
 import { DailyLogModule } from "./daily-log/daily-log.module.js";
+import {
+  SupplierModule,
+  ContractModule,
+  CostCenterModule,
+  ExpenseModule,
+} from "./commercial/commercial.module.js";
+import { completeCommercialDocs } from "./commercial/docs.js";
 import { completeExecutionDocs } from "./schedule/docs.js";
 @Module({
   imports: [
@@ -35,6 +42,10 @@ import { completeExecutionDocs } from "./schedule/docs.js";
     BudgetModule,
     ScheduleModule,
     DailyLogModule,
+    SupplierModule,
+    ContractModule,
+    CostCenterModule,
+    ExpenseModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: SessionGuard }],
 })
@@ -53,15 +64,16 @@ export async function createApp() {
     const config = new DocumentBuilder()
       .setTitle("Obras • Core SaaS")
       .setDescription(
-        "M1 + M2 + M3. Cookies HttpOnly; mutações exigem Origin igual a WEB_ORIGIN. Valores monetários e progresso são strings decimais.",
+        "M1 + M2 + M3 + M4. Cookies HttpOnly; mutações exigem Origin igual a WEB_ORIGIN. Valores monetários e progresso são strings decimais.",
       )
-      .setVersion("3.0.0")
+      .setVersion("4.0.0")
       .addCookieAuth("access")
       .build();
     const document = SwaggerModule.createDocument(app, config);
     completeResponseDocs(document);
     completeBudgetDocs(document);
     completeExecutionDocs(document);
+    completeCommercialDocs(document);
     document.security = [{ access: [] }];
     SwaggerModule.setup("api/docs", app, document);
   }

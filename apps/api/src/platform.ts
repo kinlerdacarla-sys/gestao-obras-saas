@@ -15,6 +15,7 @@ import type { Response } from "express";
 import { ZodError } from "zod";
 import { configuration } from "../../../packages/config/src/index.js";
 import { BudgetError } from "../../../packages/domain/src/budget.js";
+import { CommercialError } from "../../../packages/domain/src/commercial.js";
 import { ScheduleError } from "../../../packages/domain/src/schedule.js";
 
 @Injectable()
@@ -55,15 +56,22 @@ export const notFound = (): never =>
 export class Errors implements ExceptionFilter {
   catch(error: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
-    if (error instanceof ScheduleError)
+    if (error instanceof CommercialError)
       return response
-        .status(400)
+        .status(error.status)
         .json({
-          statusCode: 400,
+          statusCode: error.status,
           code: error.code,
           message: error.message,
           details: [],
         });
+    if (error instanceof ScheduleError)
+      return response.status(400).json({
+        statusCode: 400,
+        code: error.code,
+        message: error.message,
+        details: [],
+      });
     if (error instanceof BudgetError) {
       const status = error.code === "BUDGET_REVISION_IMMUTABLE" ? 409 : 400;
       return response.status(status).json({

@@ -1,0 +1,95 @@
+time="2026-10-07T14:35:50+02:00" level=warning msg="Found orphan containers (core-saas-m4-final, core-saas-m4-check) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container core-saas-redis-test-1 Running
+ Container core-saas-postgres-test-1 Running
+ Container core-saas-redis-test-1 Waiting
+ Container core-saas-postgres-test-1 Waiting
+ Container core-saas-postgres-test-1 Healthy
+ Container core-saas-redis-test-1 Healthy
+ Container core-saas-m4-summary Creating
+ Container core-saas-m4-summary Created
+
+> lint
+> eslint .
+
+
+> typecheck
+> tsc --noEmit && tsc -p tsconfig.tests.json && npm run typecheck -w @obras/web
+
+
+> typecheck
+> tsc --noEmit
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/app[39m
+
+[90mstdout[2m | tests/integration/commercial.test.ts[2m > [22m[2mM4 commercial with PostgreSQL and Redis[2m > [22m[2mpaginates queries with 1000 contracts 10000 items and 20000 expenses
+[22m[39mCOMMERCIAL_PERFORMANCE {"contracts":1000,"items":10000,"expenses":20000,"queryMs":93.0947500000002,"totalMs":8250.438053999998}
+
+ [32m✓[39m tests/integration/commercial.test.ts [2m([22m[2m28 tests[22m[2m)[22m[33m 10697[2mms[22m[39m
+     [33m[2m✓[22m[39m paginates queries with 1000 contracts 10000 items and 20000 expenses [33m 8251[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m28 passed[39m[22m[90m (28)[39m
+[2m   Start at [22m 12:36:10
+[2m   Duration [22m 12.50s[2m (transform 605ms, setup 0ms, import 1.66s, tests 10.70s, environment 0ms)[22m
+
+
+> build
+> tsc && npm run build -w @obras/web
+
+
+> build
+> next build
+
+▲ Next.js 16.4.0 (Turbopack)
+✓ Running next.config.ts took 29ms
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+- Experiments (use with caution):
+  · proxyClientMaxBodySize: "21mb"
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.5s
+  Running TypeScript ...
+  Finished TypeScript in 3.3s ...
+  Collecting page data using 23 workers ...
+  Generating static pages using 23 workers (0/11) ...
+  Generating static pages using 23 workers (2/11)
+  Generating static pages using 23 workers (5/11)
+  Generating static pages using 23 workers (8/11)
+✓ Generating static pages using 23 workers (11/11) in 344ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /dashboard
+├ ○ /forgot-password
+├ ○ /login
+├ ○ /projects
+├ ƒ /projects/[id]
+├ ƒ /projects/[id]/budget
+├ ƒ /projects/[id]/budget/compare
+├ ƒ /projects/[id]/budget/import
+├ ƒ /projects/[id]/budget/revisions
+├ ƒ /projects/[id]/contracts
+├ ƒ /projects/[id]/contracts/[contractId]
+├ ƒ /projects/[id]/cost-centers
+├ ƒ /projects/[id]/costs
+├ ƒ /projects/[id]/daily-logs
+├ ƒ /projects/[id]/daily-logs/[logId]
+├ ƒ /projects/[id]/expenses
+├ ƒ /projects/[id]/expenses/[expenseId]
+├ ƒ /projects/[id]/schedule
+├ ○ /reset-password
+├ ○ /settings/organizations
+├ ○ /settings/users
+└ ○ /suppliers
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+Running 2 tests using 1 worker
+··
+  2 passed (22.4s)

@@ -196,3 +196,9 @@ ADMIN gere utilizadores, organizações, obras e participantes dentro do tenant.
 Execute novamente `npm run migrate` e `npm run seed` após atualizar. O seed adiciona R0 aprovado de 1.325.000,00 MZN ao Edifício Demo. API e worker devem partilhar `BUDGET_STORAGE_PATH` (default `work/budget-storage`; volume partilhado no Compose). O worker expõe saúde na porta `WORKER_HEALTH_PORT`, default 3003.
 
 O template está em `GET /api/v1/projects/:projectId/budget/import/template`. Fluxos, endpoints, limites e instruções de teste estão em [docs/budget.md](docs/budget.md). Os mesmos comandos de lint, typecheck, testes, E2E e build incluem M1 e M2 automaticamente.
+
+## M4 — Gestão comercial e custos
+
+Fornecedores/subempreiteiros, contratos e itens ligados ao orçamento, adendas/supressões, retenção e adiantamentos, centros de custo, despesas com comprovativos e estorno, dashboard sem dupla contagem. Ver [fornecedores](docs/suppliers.md), [contratos](docs/contracts.md), [despesas](docs/expenses.md) e [regras de custos](docs/cost-management.md).
+
+As aprovações exigem outro ADMIN por defeito (`PREVENT_SELF_APPROVAL=true`). O demo inclui `diretor@example.com` para aprovação independente. O seed mantém os dados existentes e não funciona em produção.

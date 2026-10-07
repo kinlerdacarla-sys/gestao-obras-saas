@@ -28,6 +28,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { z } from "zod";
 import type { ApiRequest } from "../auth/security.js";
+import type { Prisma } from "../generated/prisma/client.js";
+import {
+  assertVersion,
+  editable,
+} from "../../../../packages/domain/src/commercial.js";
 import { Database, fail } from "../platform.js";
 import { ScheduleModule } from "../schedule/schedule.module.js";
 import { ExecutionAccess } from "../schedule/access.js";
@@ -40,6 +45,14 @@ import { versionInput } from "../../../../packages/validation/src/schedule.js";
 import { uuid } from "../../../../packages/validation/src/index.js";
 import { configuration } from "../../../../packages/config/src/index.js";
 import { maySeeFile } from "../../../../packages/domain/src/daily-log.js";
+type Owner = "dailyLog" | "expense" | "contract";
+function ownerWhere(owner: Owner, id: string) {
+  return owner === "dailyLog"
+    ? { dailyLogId: id }
+    : owner === "expense"
+      ? { expenseId: id }
+      : { contractId: id };
+}
 function signature(id: string, userId: string, expiry: number) {
   return createHmac("sha256", configuration().JWT_SECRET)
     .update(`upload:${id}:${userId}:${expiry}`)
@@ -65,6 +78,51 @@ export class DocumentService {
     @Inject(Database) readonly db: Database,
     @Inject(ExecutionAccess) readonly access: ExecutionAccess,
   ) {}
+  async authorize(
+    req: ApiRequest,
+    projectId: string,
+    owner: Owner,
+    write = false,
+  ) {
+    const result = await this.access.check(req, projectId, write);
+    if (
+      owner !== "dailyLog" &&
+      (result.role === "CLIENT" ||
+        (owner === "expense" && !["ADMIN", "MANAGER"].includes(result.role)))
+    )
+      fail(403, "ACCESS_DENIED", "Sem acesso aos comprovativos");
+    return result;
+  }
+  async claimOwner(
+    tx: Prisma.TransactionClient,
+    scope: { tenantId: string; projectId: string },
+    id: string,
+    version: number,
+    owner: Owner,
+    userId: string,
+  ) {
+    if (owner === "dailyLog") return claimLog(tx, scope, id, version);
+    const row =
+      owner === "expense"
+        ? await tx.expense.findFirst({ where: { ...scope, id } })
+        : await tx.contract.findFirst({ where: { ...scope, id } });
+    if (!row)
+      fail(
+        404,
+        owner === "expense" ? "EXPENSE_NOT_FOUND" : "CONTRACT_NOT_FOUND",
+        "Registo não encontrado",
+      );
+    assertVersion(row.version, version);
+    editable(row.status, owner === "expense" ? "EXPENSE" : "CONTRACT");
+    const where = { ...scope, id, version };
+    const data = { version: { increment: 1 }, updatedBy: userId };
+    const changed =
+      owner === "expense"
+        ? await tx.expense.updateMany({ where, data })
+        : await tx.contract.updateMany({ where, data });
+    if (changed.count !== 1) assertVersion(-1, 0);
+    return { version: row.version, logDate: new Date() };
+  }
   private file(key: string) {
     const base = path.resolve(
         process.env.DOCUMENT_STORAGE_PATH ?? "work/document-storage",
@@ -79,8 +137,15 @@ export class DocumentService {
     projectId: string,
     logId: string,
     input: z.infer<typeof uploadInput>,
+    owner: Owner = "dailyLog",
+    documentType:
+      | "INVOICE"
+      | "RECEIPT"
+      | "DELIVERY_NOTE"
+      | "PURCHASE_ORDER"
+      | "OTHER" = "OTHER",
   ) {
-    const { scope } = await this.access.check(req, projectId, true);
+    const { scope } = await this.authorize(req, projectId, owner, true);
     const ext = path.extname(input.fileName).toLowerCase(),
       allowed: Record<string, string> = {
         ".jpg": "image/jpeg",
@@ -97,7 +162,14 @@ export class DocumentService {
     )
       fail(400, "VALIDATION_ERROR", "Formato de ficheiro inválido");
     return this.db.$transaction(async (tx) => {
-      const log = await claimLog(tx, scope, logId, input.version);
+      const log = await this.claimOwner(
+        tx,
+        scope,
+        logId,
+        input.version,
+        owner,
+        req.auth.userId,
+      );
       await validBudgetItem(tx, scope, input.budgetItemId);
       if (
         input.scheduleTaskId &&
@@ -117,7 +189,7 @@ export class DocumentService {
         data: {
           ...scope,
           id,
-          dailyLogId: logId,
+          ...ownerWhere(owner, logId),
           objectKey: `tenant/${scope.tenantId}/projects/${projectId}/daily-logs/${date}/${input.isPhoto ? "photos" : "documents"}/${id}${ext}`,
           fileName: input.fileName,
           mimeType: input.mimeType,
@@ -129,7 +201,28 @@ export class DocumentService {
           createdBy: req.auth.userId,
         },
       });
-      if (input.isPhoto)
+      if (owner === "expense")
+        await tx.expenseDocument.create({
+          data: {
+            ...scope,
+            expenseId: logId,
+            documentId: id,
+            documentType,
+            createdBy: req.auth.userId,
+            updatedBy: req.auth.userId,
+          },
+        });
+      else if (owner === "contract")
+        await tx.contractDocument.create({
+          data: {
+            ...scope,
+            contractId: logId,
+            documentId: id,
+            createdBy: req.auth.userId,
+            updatedBy: req.auth.userId,
+          },
+        });
+      else if (input.isPhoto)
         await tx.dailyLogPhoto.create({
           data: {
             ...scope,
@@ -154,7 +247,7 @@ export class DocumentService {
       const expiry = expiresAt.getTime();
       return {
         id: document.id,
-        uploadUrl: `/api/v1/projects/${projectId}/daily-logs/${logId}/documents/${id}/upload?expires=${expiry}&signature=${signature(id, req.auth.userId, expiry)}`,
+        uploadUrl: `/api/v1/projects/${projectId}/${owner === "dailyLog" ? "daily-logs" : owner === "expense" ? "expenses" : "contracts"}/${logId}/documents/${id}/upload?expires=${expiry}&signature=${signature(id, req.auth.userId, expiry)}`,
         method: "PUT",
         expiresAt,
         version: log.version + 1,
@@ -169,8 +262,9 @@ export class DocumentService {
     expires: string,
     sig: string,
     file?: Express.Multer.File,
+    owner: Owner = "dailyLog",
   ) {
-    const { scope } = await this.access.check(req, projectId, true);
+    const { scope } = await this.authorize(req, projectId, owner, true);
     const expiry = Number(expires),
       expected = signature(id, req.auth.userId, expiry);
     if (
@@ -186,7 +280,7 @@ export class DocumentService {
         where: {
           ...scope,
           id,
-          dailyLogId: logId,
+          ...ownerWhere(owner, logId),
           createdBy: req.auth.userId,
           confirmedAt: null,
           deletedAt: null,
@@ -207,11 +301,29 @@ export class DocumentService {
         "VALIDATION_ERROR",
         "Tamanho, checksum ou conteúdo do ficheiro inválido",
       );
-    const log = await this.db.dailyLog.findFirst({
-      where: { ...scope, id: logId },
-    });
-    if (!log || !["DRAFT", "REOPENED"].includes(log.status))
-      fail(409, "DAILY_LOG_IMMUTABLE", "Diário não editável");
+    const log =
+      owner === "dailyLog"
+        ? await this.db.dailyLog.findFirst({ where: { ...scope, id: logId } })
+        : owner === "expense"
+          ? await this.db.expense.findFirst({ where: { ...scope, id: logId } })
+          : await this.db.contract.findFirst({
+              where: { ...scope, id: logId },
+            });
+    if (
+      !log ||
+      !(owner === "dailyLog" ? ["DRAFT", "REOPENED"] : ["DRAFT"]).includes(
+        log.status,
+      )
+    )
+      fail(
+        409,
+        owner === "dailyLog"
+          ? "DAILY_LOG_IMMUTABLE"
+          : owner === "expense"
+            ? "EXPENSE_IMMUTABLE"
+            : "CONTRACT_IMMUTABLE",
+        "Registo não editável",
+      );
     const target = this.file(document.objectKey);
     await mkdir(path.dirname(target), { recursive: true });
     try {
@@ -233,16 +345,17 @@ export class DocumentService {
     logId: string,
     id: string,
     version: number,
+    owner: Owner = "dailyLog",
   ) {
-    const { scope } = await this.access.check(req, projectId, true);
+    const { scope } = await this.authorize(req, projectId, owner, true);
     return this.db.$transaction(async (tx) => {
-      await claimLog(tx, scope, logId, version);
+      await this.claimOwner(tx, scope, logId, version, owner, req.auth.userId);
       const document =
         (await tx.document.findFirst({
           where: {
             ...scope,
             id,
-            dailyLogId: logId,
+            ...ownerWhere(owner, logId),
             createdBy: req.auth.userId,
             confirmedAt: null,
             deletedAt: null,
@@ -271,7 +384,14 @@ export class DocumentService {
         tx,
         req.auth,
         {
-          action: document.isPhoto ? "PHOTO_UPLOADED" : "DOCUMENT_UPLOADED",
+          action:
+            owner === "expense"
+              ? "EXPENSE_DOCUMENT_ATTACHED"
+              : owner === "contract"
+                ? "CONTRACT_DOCUMENT_ATTACHED"
+                : document.isPhoto
+                  ? "PHOTO_UPLOADED"
+                  : "DOCUMENT_UPLOADED",
           entityType: "Document",
           entityId: id,
           projectId,
@@ -292,14 +412,15 @@ export class DocumentService {
     projectId: string,
     logId: string,
     id: string,
+    owner: Owner = "dailyLog",
   ) {
-    const { scope, role } = await this.access.check(req, projectId);
+    const { scope, role } = await this.authorize(req, projectId, owner);
     const document =
       (await this.db.document.findFirst({
         where: {
           ...scope,
           id,
-          dailyLogId: logId,
+          ...ownerWhere(owner, logId),
           confirmedAt: { not: null },
           deletedAt: null,
         },
@@ -308,8 +429,9 @@ export class DocumentService {
       where: { ...scope, id: logId },
     });
     if (
-      !maySeeFile(role, document.visibility) ||
-      (["CLIENT", "FINANCIER"].includes(role) && log?.status !== "APPROVED")
+      owner === "dailyLog" &&
+      (!maySeeFile(role, document.visibility) ||
+        (["CLIENT", "FINANCIER"].includes(role) && log?.status !== "APPROVED"))
     )
       fail(403, "ACCESS_DENIED", "Sem acesso ao ficheiro");
     return { document, bytes: await readFile(this.file(document.objectKey)) };
@@ -320,13 +442,14 @@ export class DocumentService {
     logId: string,
     id: string,
     version: number,
+    owner: Owner = "dailyLog",
   ) {
-    const { scope } = await this.access.check(req, projectId, true);
+    const { scope } = await this.authorize(req, projectId, owner, true);
     return this.db.$transaction(async (tx) => {
-      await claimLog(tx, scope, logId, version);
+      await this.claimOwner(tx, scope, logId, version, owner, req.auth.userId);
       const document =
         (await tx.document.findFirst({
-          where: { ...scope, id, dailyLogId: logId, deletedAt: null },
+          where: { ...scope, id, ...ownerWhere(owner, logId), deletedAt: null },
         })) ?? fail(404, "PHOTO_NOT_FOUND", "Ficheiro não encontrado");
       await tx.document.update({
         where: { ...scope, id },

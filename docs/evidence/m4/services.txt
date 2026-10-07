@@ -1,0 +1,8 @@
+NAME                        IMAGE              COMMAND                  SERVICE         CREATED              STATUS                        PORTS
+core-saas-api-1             core-saas-api      "docker-entrypoint.s…"   api             About a minute ago   Up About a minute (healthy)   127.0.0.1:3001->3001/tcp
+core-saas-postgres-1        postgres:18        "docker-entrypoint.s…"   postgres        4 hours ago          Up 4 hours (healthy)          127.0.0.1:5432->5432/tcp
+core-saas-postgres-test-1   postgres:18        "docker-entrypoint.s…"   postgres-test   5 minutes ago        Up 5 minutes (healthy)        5432/tcp
+core-saas-redis-1           redis:8.2          "docker-entrypoint.s…"   redis           4 hours ago          Up 4 hours (healthy)          127.0.0.1:6379->6379/tcp
+core-saas-redis-test-1      redis:8.2          "docker-entrypoint.s…"   redis-test      5 minutes ago        Up 5 minutes (healthy)        6379/tcp
+core-saas-web-1             core-saas-web      "docker-entrypoint.s…"   web             About a minute ago   Up About a minute (healthy)   127.0.0.1:3000->3000/tcp
+core-saas-worker-1          core-saas-worker   "docker-entrypoint.s…"   worker          About a minute ago   Up About a minute (healthy)   3000-3001/tcp

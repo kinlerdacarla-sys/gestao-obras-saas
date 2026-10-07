@@ -1,3 +1,4 @@
+import { seedCommercial } from "./seed-commercial.js";
 import { seedExecution } from "./seed-execution.js";
 import { seedBudget } from "./seed-budget.js";
 import "dotenv/config";
@@ -24,6 +25,7 @@ try {
     ["fiscal", "Fiscal Demo", "INSPECTOR"],
     ["financiador", "Financiador Demo", "FINANCIER"],
     ["cliente", "Cliente Demo", "CLIENT"],
+    ["diretor", "Diretor Demo", "ADMIN"],
   ];
   const users = [];
   for (const [email, name, role] of people) {
@@ -99,6 +101,13 @@ try {
   });
   await seedBudget(db, tenant.id, project.id, admin.id);
   await seedExecution(db, tenant.id, project.id, admin.id);
+  await seedCommercial(
+    db,
+    tenant.id,
+    project.id,
+    admin.id,
+    users.find((x) => x.role === "MANAGER")!.user.id,
+  );
   console.info("Seed concluído: construtora-demo / admin@example.com");
 } finally {
   await db.$disconnect();

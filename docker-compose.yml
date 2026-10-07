@@ -37,6 +37,7 @@ services:
       PORT: 3001
       BUDGET_STORAGE_PATH: /data/budget-storage
       DOCUMENT_STORAGE_PATH: /data/document-storage
+      PREVENT_SELF_APPROVAL: ${PREVENT_SELF_APPROVAL:-true}
     volumes: ["budget_storage:/data/budget-storage", "document_storage:/data/document-storage"]
     command: ["sh", "-c", "npm run migrate && npm run seed && npm run dev:api"]
     ports: ["127.0.0.1:3001:3001"]
