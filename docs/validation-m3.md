@@ -59,7 +59,7 @@ A revisão visual dos separadores foi seguida de nova passagem de lint, tipos, b
 
 `docker compose config` e `docker compose up --build -d --wait --wait-timeout 180` executados com sucesso. Postgres, Redis, API, web e worker healthy; `/health` confirma as três dependências. A imagem de validação instala dependências e Chromium no Linux; bancos de teste foram recriados antes da execução final. O Dockerfile agora preserva o cache de dependências e navegador quando apenas o código muda.
 
-Pipeline existente executa install, generate, migrations, lint, typecheck, unit, integration, seed, build e E2E; inclui PostgreSQL/Redis e job adicional de arranque Compose. Sintaxe validada com actionlint 1.7.12. Não existe Git remote configurado, portanto nenhuma execução GitHub Actions foi iniciada ou presumida.
+Pipeline existente executa install, generate, migrations, lint, typecheck, unit, integration, seed, build e E2E; inclui PostgreSQL/Redis e job adicional de arranque Compose. Sintaxe validada com actionlint 1.7.12. Repositório publicado em `kinlerdacarla-sys/gestao-obras-saas`, branch `main`. A execução remota [37615780833](https://github.com/kinlerdacarla-sys/gestao-obras-saas/actions/runs/37615780833), para o commit `c8b0f30a9a9db44b533039f355ffb337118789f5`, terminou com sucesso nos jobs `verify` e `compose-smoke`, incluindo E2E. Estado e etapas consultados pela API do GitHub nesta revalidação.
 
 ## Como testar manualmente
 
@@ -72,4 +72,10 @@ Pipeline existente executa install, generate, migrations, lint, typecheck, unit,
 
 ## Pendências
 
-Somente execução remota do CI, dependente de configurar/publicar o repositório num remoto GitHub. Nenhuma falha local de lint, tipos, testes ou build permanece.
+Nenhuma pendência identificada na revalidação do código M1 + M2 + M3. Nenhuma funcionalidade foi reimplementada e não houve deploy em produção.
+
+## Revalidação do estado publicado — 7 de outubro de 2026
+
+A árvore Git estava limpa e sincronizada com `origin/main`; o commit inicial, apesar do título mencionar M1/M2, já inclui o M3. Repetidos no Docker: configuração Compose, `up --build -d --wait`, seis migrations desde zero, seed, lint, typecheck, 92 unitários, 87 testes de integração, build de produção e 7 E2E. Todos aprovados. [Log desta execução](evidence/m3/revalidation.txt). PostgreSQL, Redis, API, Web e Worker healthy; `/health` devolveu API/PostgreSQL/Redis `up`.
+
+Verificação adicional na base isolada: ligação de tarefa a rubrica e cronograma a revisão aprovada, ponderação `BUDGET_VALUE` e progresso calculado corretamente (`100.00%` para a única tarefa ligada). O worker real confirmou o scheduler diário e processou o job de snapshot com sucesso. Inspeção de Git confirmou `.env` ignorado e nenhuma chave privada versionada; esta atualização inclui apenas documentação e evidência, sem credenciais novas.

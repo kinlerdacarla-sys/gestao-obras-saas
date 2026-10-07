@@ -1,0 +1,216 @@
+ Container core-saas-redis-test-1 Creating
+ Container core-saas-postgres-test-1 Creating
+ Container core-saas-postgres-test-1 Created
+ Container core-saas-redis-test-1 Created
+ Container core-saas-postgres-test-1 Starting
+ Container core-saas-redis-test-1 Starting
+ Container core-saas-postgres-test-1 Started
+ Container core-saas-redis-test-1 Started
+ Container core-saas-postgres-test-1 Waiting
+ Container core-saas-redis-test-1 Waiting
+ Container core-saas-redis-test-1 Healthy
+ Container core-saas-postgres-test-1 Healthy
+ Container core-saas-revalidation Creating
+ Container core-saas-revalidation Created
+
+> migrate
+> prisma migrate deploy
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+Datasource "db": PostgreSQL database "obras_test", schema "public" at "postgres-test:5432"
+
+6 migrations found in prisma/migrations
+
+Applying migration `202610070001_core`
+Applying migration `202610070002_integrity`
+Applying migration `202610070003_budget`
+Applying migration `202610070004_budget_integrity`
+Applying migration `202610070005_execution`
+Applying migration `202610070006_execution_integrity`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 202610070001_core/
+    └─ migration.sql
+  └─ 202610070002_integrity/
+    └─ migration.sql
+  └─ 202610070003_budget/
+    └─ migration.sql
+  └─ 202610070004_budget_integrity/
+    └─ migration.sql
+  └─ 202610070005_execution/
+    └─ migration.sql
+  └─ 202610070006_execution_integrity/
+    └─ migration.sql
+
+All migrations have been successfully applied.
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+Datasource "db": PostgreSQL database "obras_test", schema "public" at "postgres-test:5432"
+
+6 migrations found in prisma/migrations
+
+Database schema is up to date!
+
+> lint
+> eslint .
+
+
+> typecheck
+> tsc --noEmit && tsc -p tsconfig.tests.json && npm run typecheck -w @obras/web
+
+
+> typecheck
+> tsc --noEmit
+
+
+> test
+> vitest run tests/unit
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/app[39m
+
+ [32m✓[39m tests/unit/budget.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+[90mstdout[2m | tests/unit/schedule.test.ts[2m > [22m[2mschedule domain[2m > [22m[2mcomputes 500 tasks without recursive traversal
+[22m[39mSCHEDULE_PERFORMANCE {"count":500,"ms":27.852283999999997}
+
+[90mstdout[2m | tests/unit/schedule.test.ts[2m > [22m[2mschedule domain[2m > [22m[2mcomputes 2000 tasks without recursive traversal
+[22m[39mSCHEDULE_PERFORMANCE {"count":2000,"ms":64.87208999999999}
+
+[90mstdout[2m | tests/unit/schedule.test.ts[2m > [22m[2mschedule domain[2m > [22m[2mcomputes 5000 tasks without recursive traversal
+[22m[39mSCHEDULE_PERFORMANCE {"count":5000,"ms":131.49013100000002}
+
+ [32m✓[39m tests/unit/schedule.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 246[2mms[22m[39m
+ [32m✓[39m tests/unit/security.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 103[2mms[22m[39m
+[90mstdout[2m | tests/unit/budget-excel.test.ts[2m > [22m[2mXLSX fixtures and performance[2m > [22m[2mparses, validates, totals, compares and exports 1000 rows
+[22m[39mBUDGET_PERFORMANCE {"rows":1000,"fixtureAndParseMs":93,"validateTreeCompareMs":53,"exportMs":43,"totalMs":188}
+
+[90mstdout[2m | tests/unit/budget-excel.test.ts[2m > [22m[2mXLSX fixtures and performance[2m > [22m[2mparses, validates, totals, compares and exports 5000 rows
+[22m[39mBUDGET_PERFORMANCE {"rows":5000,"fixtureAndParseMs":284,"validateTreeCompareMs":173,"exportMs":176,"totalMs":634}
+
+[90mstdout[2m | tests/unit/budget-excel.test.ts[2m > [22m[2mXLSX fixtures and performance[2m > [22m[2mparses, validates, totals, compares and exports 10000 rows
+[22m[39mBUDGET_PERFORMANCE {"rows":10000,"fixtureAndParseMs":469,"validateTreeCompareMs":345,"exportMs":335,"totalMs":1150}
+
+ [32m✓[39m tests/unit/budget-excel.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 2076[2mms[22m[39m
+     [33m[2m✓[22m[39m parses, validates, totals, compares and exports 5000 rows [33m 634[2mms[22m[39m
+     [33m[2m✓[22m[39m parses, validates, totals, compares and exports 10000 rows [33m 1150[2mms[22m[39m
+ [32m✓[39m tests/unit/daily-log.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m      Tests [22m [1m[32m92 passed[39m[22m[90m (92)[39m
+[2m   Start at [22m 11:49:07
+[2m   Duration [22m 4.24s[2m (transform 283ms, setup 0ms, import 1.19s, tests 2.46s, environment 0ms)[22m
+
+
+> test:integration
+> vitest run tests/integration
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/app[39m
+
+[90mstdout[2m | tests/integration/execution.test.ts[2m > [22m[2mM3 execution with PostgreSQL and Redis[2m > [22m[2mreads and baselines 500 database tasks in bounded queries
+[22m[39mSCHEDULE_DATABASE_PERFORMANCE {"count":500,"readMs":48.30525699999998,"baselineMs":172.7734989999999}
+
+[90mstdout[2m | tests/integration/execution.test.ts[2m > [22m[2mM3 execution with PostgreSQL and Redis[2m > [22m[2mreads and baselines 2000 database tasks in bounded queries
+[22m[39mSCHEDULE_DATABASE_PERFORMANCE {"count":2000,"readMs":93.34403899999961,"baselineMs":634.8029640000004}
+
+(node:431) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[90mstdout[2m | tests/integration/execution.test.ts[2m > [22m[2mM3 execution with PostgreSQL and Redis[2m > [22m[2mreads and baselines 5000 database tasks in bounded queries
+[22m[39mSCHEDULE_DATABASE_PERFORMANCE {"count":5000,"readMs":285.22298300000057,"baselineMs":2001.4400619999997}
+
+ [32m✓[39m tests/integration/execution.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 7616[2mms[22m[39m
+     [33m[2m✓[22m[39m reads and baselines 500 database tasks in bounded queries [33m 394[2mms[22m[39m
+     [33m[2m✓[22m[39m reads and baselines 2000 database tasks in bounded queries [33m 1227[2mms[22m[39m
+     [33m[2m✓[22m[39m reads and baselines 5000 database tasks in bounded queries [33m 3838[2mms[22m[39m
+[90mstdout[2m | tests/integration/budget.test.ts[2m > [22m[2mM2 budgets with real PostgreSQL/Redis/worker[2m > [22m[2mimports and reads 1000 rows through PostgreSQL and worker
+[22m[39mBUDGET_REVISION_PERFORMANCE {"rows":1000,"submitApproveCloneMs":353}
+BUDGET_DATABASE_PERFORMANCE {"rows":1000,"uploadWorkerPreviewMs":499,"confirmMs":661,"treeMs":27,"pageAndCompareMs":98,"totalMs":1284}
+
+[90mstdout[2m | tests/integration/budget.test.ts[2m > [22m[2mM2 budgets with real PostgreSQL/Redis/worker[2m > [22m[2mimports and reads 5000 rows through PostgreSQL and worker
+[22m[39mBUDGET_REVISION_PERFORMANCE {"rows":5000,"submitApproveCloneMs":1517}
+BUDGET_DATABASE_PERFORMANCE {"rows":5000,"uploadWorkerPreviewMs":1242,"confirmMs":2614,"treeMs":90,"pageAndCompareMs":363,"totalMs":4309}
+
+[90mstdout[2m | tests/integration/budget.test.ts[2m > [22m[2mM2 budgets with real PostgreSQL/Redis/worker[2m > [22m[2mimports and reads 10000 rows through PostgreSQL and worker
+[22m[39mBUDGET_REVISION_PERFORMANCE {"rows":10000,"submitApproveCloneMs":3255}
+BUDGET_DATABASE_PERFORMANCE {"rows":10000,"uploadWorkerPreviewMs":2581,"confirmMs":4867,"treeMs":203,"pageAndCompareMs":922,"totalMs":8574}
+
+ [32m✓[39m tests/integration/budget.test.ts [2m([22m[2m27 tests[22m[2m)[22m[33m 22351[2mms[22m[39m
+     [33m[2m✓[22m[39m imports and reads 1000 rows through PostgreSQL and worker [33m 1700[2mms[22m[39m
+     [33m[2m✓[22m[39m imports and reads 5000 rows through PostgreSQL and worker [33m 5977[2mms[22m[39m
+     [33m[2m✓[22m[39m imports and reads 10000 rows through PostgreSQL and worker [33m 12340[2mms[22m[39m
+     [33m[2m✓[22m[39m reimports using stable IDs, soft deletes and preserves approved history [33m 475[2mms[22m[39m
+ [32m✓[39m tests/integration/core.test.ts [2m([22m[2m31 tests[22m[2m)[22m[33m 1499[2mms[22m[39m
+     [33m[2m✓[22m[39m rate limits repeated login attempts [33m 380[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m87 passed[39m[22m[90m (87)[39m
+[2m   Start at [22m 11:49:11
+[2m   Duration [22m 35.15s[2m (transform 672ms, setup 0ms, import 3.28s, tests 31.47s, environment 0ms)[22m
+
+
+> seed
+> tsx prisma/seed.ts
+
+Seed concluído: construtora-demo / admin@example.com
+
+> build
+> tsc && npm run build -w @obras/web
+
+
+> build
+> next build
+
+▲ Next.js 16.4.0 (Turbopack)
+✓ Running next.config.ts took 40ms
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+- Experiments (use with caution):
+  · proxyClientMaxBodySize: "21mb"
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.6s
+  Running TypeScript ...
+  Finished TypeScript in 3.6s ...
+  Collecting page data using 19 workers ...
+  Generating static pages using 19 workers (0/10) ...
+  Generating static pages using 19 workers (2/10)
+  Generating static pages using 19 workers (4/10)
+  Generating static pages using 19 workers (7/10)
+✓ Generating static pages using 19 workers (10/10) in 951ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /dashboard
+├ ○ /forgot-password
+├ ○ /login
+├ ○ /projects
+├ ƒ /projects/[id]
+├ ƒ /projects/[id]/budget
+├ ƒ /projects/[id]/budget/compare
+├ ƒ /projects/[id]/budget/import
+├ ƒ /projects/[id]/budget/revisions
+├ ƒ /projects/[id]/daily-logs
+├ ƒ /projects/[id]/daily-logs/[logId]
+├ ƒ /projects/[id]/schedule
+├ ○ /reset-password
+├ ○ /settings/organizations
+└ ○ /settings/users
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> test:e2e
+> playwright test
+
+
+Running 7 tests using 1 worker
+·······
+  7 passed (33.1s)
