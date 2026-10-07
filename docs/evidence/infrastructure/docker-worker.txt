@@ -1,0 +1,6 @@
+worker-1  | 
+worker-1  | > dev:worker
+worker-1  | > tsx watch apps/worker/src/main.ts
+worker-1  | 
+worker-1  | Worker ready: notifications
+worker-1  | Processing budget import eede51cf-a1aa-436c-b39a-1a2519f6d0b7-0

@@ -1,0 +1,139 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: obras
+      POSTGRES_PASSWORD: development
+      POSTGRES_DB: obras
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U obras -d obras"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:8.2
+    ports: ["127.0.0.1:6379:6379"]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: ["redis_data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+      target: application
+    environment: &environment
+      NODE_ENV: development
+      DATABASE_URL: postgresql://obras:development@postgres:5432/obras
+      REDIS_URL: redis://redis:6379
+      WEB_ORIGIN: http://localhost:3000
+      JWT_SECRET: ${JWT_SECRET:-local-development-only-change-this-secret-before-production}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-Demo-Obras!2026}
+      PORT: 3001
+      BUDGET_STORAGE_PATH: /data/budget-storage
+      DOCUMENT_STORAGE_PATH: /data/document-storage
+    volumes: ["budget_storage:/data/budget-storage", "document_storage:/data/document-storage"]
+    command: ["sh", "-c", "npm run migrate && npm run seed && npm run dev:api"]
+    ports: ["127.0.0.1:3001:3001"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+      target: application
+    environment:
+      API_INTERNAL_URL: http://api:3001
+    command: ["npm", "run", "dev:web"]
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 15s
+  worker:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+      target: application
+    environment: *environment
+    volumes: ["budget_storage:/data/budget-storage"]
+    command: ["npm", "run", "dev:worker"]
+    depends_on:
+      api: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3003/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  postgres-test:
+    profiles: [validation]
+    image: postgres:18
+    environment:
+      POSTGRES_USER: obras
+      POSTGRES_PASSWORD: validation-only
+      POSTGRES_DB: obras_test
+    tmpfs: [/var/lib/postgresql]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U obras -d obras_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  redis-test:
+    profiles: [validation]
+    image: redis:8.2
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  tests:
+    profiles: [validation]
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+      target: validation
+    environment:
+      CI: "true"
+      NODE_ENV: test
+      DATABASE_URL: postgresql://obras:validation-only@postgres-test:5432/obras_test
+      REDIS_URL: redis://redis-test:6379
+      WEB_ORIGIN: http://localhost:3000
+      API_INTERNAL_URL: http://localhost:3001
+      JWT_SECRET: isolated-validation-only-signing-key-at-least-32-characters
+      DEMO_PASSWORD: Demo-Obras!2026
+      PORT: 3001
+      WORKER_HEALTH_PORT: 3003
+      BUDGET_STORAGE_PATH: /app/work/budget-storage
+      NEXT_TELEMETRY_DISABLED: "1"
+    shm_size: 1gb
+    depends_on:
+      postgres-test: { condition: service_healthy }
+      redis-test: { condition: service_healthy }
+volumes:
+  postgres_data:
+  redis_data:
+  budget_storage:
+  document_storage:

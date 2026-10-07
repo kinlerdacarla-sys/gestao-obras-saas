@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-07",
+  "timezone": "Africa/Maputo",
+  "docker": "29.8.2",
+  "compose": "5.5.1",
+  "platform": "Linux / WSL 2",
+  "node": "24.21.0",
+  "npm": "11.19.0",
+  "postgresql": "18.6",
+  "redis": "8.2.10",
+  "composeConfig": "PASS",
+  "composeBuild": "PASS",
+  "composeUpWithBuild": "PASS",
+  "composeWait": "PASS",
+  "health": {
+    "api": "up",
+    "postgresql": "up",
+    "redis": "up"
+  },
+  "services": {
+    "api": "healthy",
+    "postgres": "healthy",
+    "redis": "healthy",
+    "web": "healthy",
+    "worker": "healthy"
+  },
+  "migrations": {
+    "applied": 4,
+    "pending": 0
+  },
+  "seed": "PASS",
+  "unit": {
+    "passed": 55,
+    "failed": 0
+  },
+  "integration": {
+    "passed": 58,
+    "failed": 0
+  },
+  "e2e": {
+    "passed": 5,
+    "failed": 0
+  },
+  "lint": "PASS",
+  "typecheck": "PASS",
+  "build": "PASS",
+  "suiteExitCode": 0,
+  "actionlint": {
+    "version": "1.7.12",
+    "exitCode": 0
+  },
+  "remoteCI": "Not run: no Git remote configured",
+  "nativeDatabaseDependencies": false,
+  "productionDeploy": false
+}

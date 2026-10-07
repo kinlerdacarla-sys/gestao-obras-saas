@@ -1,0 +1,95 @@
+time="2026-10-07T11:53:17+02:00" level=warning msg="Found orphan containers (core-saas-m3-final) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container core-saas-postgres-test-1 Running 
+ Container core-saas-redis-test-1 Running 
+ Container core-saas-redis-test-1 Waiting 
+ Container core-saas-postgres-test-1 Waiting 
+ Container core-saas-postgres-test-1 Healthy 
+ Container core-saas-redis-test-1 Healthy 
+ Container core-saas-tests-run-e9b29df48a92 Creating 
+ Container core-saas-tests-run-e9b29df48a92 Created 
+
+> lint
+> eslint .
+
+
+> typecheck
+> tsc --noEmit && tsc -p tsconfig.tests.json && npm run typecheck -w @obras/web
+
+
+> typecheck
+> tsc --noEmit
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/app[39m
+
+[90mstdout[2m | tests/integration/execution.test.ts[2m > [22m[2mM3 execution with PostgreSQL and Redis[2m > [22m[2mreads and baselines 500 database tasks in bounded queries
+[22m[39mSCHEDULE_DATABASE_PERFORMANCE {"count":500,"readMs":34.16928900000039,"baselineMs":147.90373799999998}
+
+[90mstdout[2m | tests/integration/execution.test.ts[2m > [22m[2mM3 execution with PostgreSQL and Redis[2m > [22m[2mreads and baselines 2000 database tasks in bounded queries
+[22m[39mSCHEDULE_DATABASE_PERFORMANCE {"count":2000,"readMs":101.14158399999997,"baselineMs":529.6727790000004}
+
+(node:144) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[90mstdout[2m | tests/integration/execution.test.ts[2m > [22m[2mM3 execution with PostgreSQL and Redis[2m > [22m[2mreads and baselines 5000 database tasks in bounded queries
+[22m[39mSCHEDULE_DATABASE_PERFORMANCE {"count":5000,"readMs":283.2064110000001,"baselineMs":1469.0634840000002}
+
+ [32m✓[39m tests/integration/execution.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 7539[2mms[22m[39m
+     [33m[2m✓[22m[39m snapshots are retry safe [33m 731[2mms[22m[39m
+     [33m[2m✓[22m[39m reads and baselines 500 database tasks in bounded queries [33m 364[2mms[22m[39m
+     [33m[2m✓[22m[39m reads and baselines 2000 database tasks in bounded queries [33m 1183[2mms[22m[39m
+     [33m[2m✓[22m[39m reads and baselines 5000 database tasks in bounded queries [33m 3265[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m29 passed[39m[22m[90m (29)[39m
+[2m   Start at [22m 09:53:33
+[2m   Duration [22m 9.22s[2m (transform 635ms, setup 0ms, import 1.55s, tests 7.54s, environment 0ms)[22m
+
+
+> build
+> tsc && npm run build -w @obras/web
+
+
+> build
+> next build
+
+▲ Next.js 16.4.0 (Turbopack)
+✓ Running next.config.ts took 26ms
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+- Experiments (use with caution):
+  · proxyClientMaxBodySize: "21mb"
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.5s
+  Running TypeScript ...
+  Finished TypeScript in 3.4s ...
+  Collecting page data using 19 workers ...
+  Generating static pages using 19 workers (0/10) ...
+  Generating static pages using 19 workers (2/10) 
+  Generating static pages using 19 workers (4/10) 
+  Generating static pages using 19 workers (7/10) 
+✓ Generating static pages using 19 workers (10/10) in 615ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /dashboard
+├ ○ /forgot-password
+├ ○ /login
+├ ○ /projects
+├ ƒ /projects/[id]
+├ ƒ /projects/[id]/budget
+├ ƒ /projects/[id]/budget/compare
+├ ƒ /projects/[id]/budget/import
+├ ƒ /projects/[id]/budget/revisions
+├ ƒ /projects/[id]/daily-logs
+├ ƒ /projects/[id]/daily-logs/[logId]
+├ ƒ /projects/[id]/schedule
+├ ○ /reset-password
+├ ○ /settings/organizations
+└ ○ /settings/users
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

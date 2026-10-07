@@ -1,0 +1,164 @@
+ Image core-saas-web Building 
+ Image core-saas-api Building 
+ Image core-saas-tests Building 
+ Image core-saas-worker Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.60kB done
+#1 DONE 0.0s
+
+#2 [tests internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.07kB done
+#2 DONE 0.0s
+
+#3 [web internal] load metadata for docker.io/library/node:24-bookworm-slim
+#3 DONE 1.1s
+
+#4 [tests internal] load .dockerignore
+#4 transferring context: 152B done
+#4 DONE 0.0s
+
+#5 [web base  1/13] FROM docker.io/library/node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20
+#5 resolve docker.io/library/node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 0.0s done
+#5 DONE 0.1s
+
+#6 [tests internal] load build context
+#6 transferring context: 60.51kB 0.1s done
+#6 DONE 0.1s
+
+#7 [tests base 10/13] COPY packages/types/package.json packages/types/package.json
+#7 CACHED
+
+#8 [tests base  2/13] RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [tests base 11/13] COPY packages/ui/package.json packages/ui/package.json
+#9 CACHED
+
+#10 [tests base  8/13] COPY packages/config/package.json packages/config/package.json
+#10 CACHED
+
+#11 [tests base  9/13] COPY packages/domain/package.json packages/domain/package.json
+#11 CACHED
+
+#12 [tests base  3/13] WORKDIR /app
+#12 CACHED
+
+#13 [tests base 12/13] COPY packages/validation/package.json packages/validation/package.json
+#13 CACHED
+
+#14 [tests base  6/13] COPY apps/web/package.json apps/web/package.json
+#14 CACHED
+
+#15 [tests base  5/13] COPY apps/api/package.json apps/api/package.json
+#15 CACHED
+
+#16 [tests base  4/13] COPY package.json package-lock.json ./
+#16 CACHED
+
+#17 [tests base  7/13] COPY apps/worker/package.json apps/worker/package.json
+#17 CACHED
+
+#18 [tests browser-dependencies 1/1] RUN npx playwright install --with-deps chromium
+#18 CACHED
+
+#19 [tests base 13/13] RUN npm ci
+#19 CACHED
+
+#20 [web application 1/2] COPY . .
+#20 DONE 0.1s
+
+#21 [tests validation 1/2] COPY . .
+#21 DONE 0.1s
+
+#20 [worker application 1/2] COPY . .
+#20 DONE 0.1s
+
+#22 [web application 2/2] RUN npm run generate
+#22 0.511 
+#22 0.511 > generate
+#22 0.511 > prisma generate
+#22 0.511 
+#22 1.518 Loaded Prisma config from prisma.config.ts.
+#22 1.518 
+#22 1.667 Prisma schema loaded from prisma/schema.prisma.
+#22 2.166 
+#22 2.166 ✔ Generated Prisma Client (7.10.0) to ./apps/api/src/generated/prisma in 303ms
+#22 2.166 
+#22 DONE 2.2s
+
+#23 [tests validation 2/2] RUN npm run generate
+#23 0.503 
+#23 0.503 > generate
+#23 0.503 > prisma generate
+#23 0.503 
+#23 1.504 Loaded Prisma config from prisma.config.ts.
+#23 1.504 
+#23 1.655 Prisma schema loaded from prisma/schema.prisma.
+#23 2.153 
+#23 2.153 ✔ Generated Prisma Client (7.10.0) to ./apps/api/src/generated/prisma in 310ms
+#23 2.153 
+#23 DONE 2.2s
+
+#24 [tests] exporting to image
+#24 exporting layers
+#24 exporting layers 0.5s done
+#24 exporting manifest sha256:4254c2d0cf461f6c896ae163b8bb9e8357c83bb45e722b1a50e71f934b02fcc9 0.1s done
+#24 exporting config sha256:c1f4a9175eb181e140157ef196b552b35f234bb92eb1c6785d82fb70104c4002
+#24 exporting config sha256:c1f4a9175eb181e140157ef196b552b35f234bb92eb1c6785d82fb70104c4002 0.1s done
+#24 exporting attestation manifest sha256:3320ed3b47f6d169dcad8e5f47e8658d9f69e1bdd887bd32147ecad0c4b8c7ae
+#24 exporting attestation manifest sha256:3320ed3b47f6d169dcad8e5f47e8658d9f69e1bdd887bd32147ecad0c4b8c7ae 0.2s done
+#24 exporting manifest list sha256:dfc6946343f072e44146ef7ff81ce8aae6e1fcadfce92e79b336fb0bd329af57
+#24 exporting manifest list sha256:dfc6946343f072e44146ef7ff81ce8aae6e1fcadfce92e79b336fb0bd329af57 0.1s done
+#24 naming to docker.io/library/core-saas-tests:latest 0.1s done
+#24 unpacking to docker.io/library/core-saas-tests:latest
+#24 unpacking to docker.io/library/core-saas-tests:latest 0.2s done
+#24 DONE 1.4s
+
+#25 [api] exporting to image
+#25 exporting layers 0.5s done
+#25 exporting manifest sha256:c429e72a34db5fec0722a17ea1a942902b916895603eb52e21edc9d91912e9f2 0.1s done
+#25 exporting config sha256:431d73b0bb888d480f1720a51b49bfccd4c467a42a19fb1b1e4aa2ffef6e0d44 0.1s done
+#25 exporting attestation manifest sha256:1a2b410f31e1399932ab3ba69411e2d07fdd880821836fb92da26f5eb4ae9824 0.2s done
+#25 exporting manifest list sha256:096e67d171361ceb81eb02b060da7c1042ffe3ba3665ab0448ac72b94723ae04 0.1s done
+#25 naming to docker.io/library/core-saas-api:latest 0.0s done
+#25 unpacking to docker.io/library/core-saas-api:latest 0.2s done
+#25 DONE 1.5s
+
+#26 [web] exporting to image
+#26 exporting layers 0.5s done
+#26 exporting manifest sha256:cd2e6a042d99cbe80ad4d40236845695425e5884b25e25858d7187d40c3d9286 0.1s done
+#26 exporting config sha256:773a69ae43f296feb857cac88d97b75b479560b76c93c6ef2681d177ca28bf6f 0.1s done
+#26 exporting attestation manifest sha256:53facacc1dc59ba90118ea91d4b9e3280f4ecc8ac57f9d8a30c70b338530188e 0.1s done
+#26 exporting manifest list sha256:acd10b1adeec469952681ae711b031c7624747e9cbe5419683093f728a527b09 0.1s done
+#26 naming to docker.io/library/core-saas-web:latest 0.0s done
+#26 unpacking to docker.io/library/core-saas-web:latest 0.2s done
+#26 DONE 1.5s
+
+#27 [worker] exporting to image
+#27 exporting layers 0.5s done
+#27 exporting manifest sha256:e65755ebbe98345a370da580da53cdf286560aeb70c9a945ddd70cc2686e0e63 0.1s done
+#27 exporting config sha256:b2396f93a1c82b82dd24dfca7da774282fa30e384734c2a903542dfcfecfd644 0.1s done
+#27 exporting attestation manifest sha256:9f0e89de91735d6083afb6dc31fcb466a491603f1d902d892929363cc78c84b8 0.1s done
+#27 exporting manifest list sha256:617465c95270622025d605f82b8f353991ff2bf7c1363110478cfa2fd7b43da3 0.1s done
+#27 naming to docker.io/library/core-saas-worker:latest 0.0s done
+#27 unpacking to docker.io/library/core-saas-worker:latest 0.2s done
+#27 DONE 1.5s
+
+#28 [tests] resolving provenance for metadata file
+#28 ...
+
+#29 [web] resolving provenance for metadata file
+#29 DONE 0.1s
+
+#28 [tests] resolving provenance for metadata file
+#28 DONE 0.3s
+
+#30 [api] resolving provenance for metadata file
+#30 DONE 0.2s
+
+#31 [worker] resolving provenance for metadata file
+#31 DONE 0.0s
+ Image core-saas-api Built 
+ Image core-saas-web Built 
+ Image core-saas-worker Built 
+ Image core-saas-tests Built 

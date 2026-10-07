@@ -1,0 +1,1 @@
+{"result":"PASS","projectId":"7a322fdb-f336-47c7-a32b-0a2b61183e75","web":"up","loginRefreshLogout":"PASS","separateApiWorker":"PASS","sharedOriginalChecksum":"PASS","revisionHistory":"PASS","optimisticLocking":"PASS","comparison":"32000 MZN / 32%","export":"PASS","audit":"PASS"}

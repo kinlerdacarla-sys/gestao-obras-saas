@@ -1,0 +1,870 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../apps/api/src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  INSPECTOR
+  FINANCIER
+  CLIENT
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  BLOCKED
+  DISABLED
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+enum OrganizationType {
+  CONTRACTOR
+  CLIENT
+  INSPECTOR
+  FINANCIER
+  SUPPLIER
+  SUBCONTRACTOR
+  OTHER
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  SUSPENDED
+  COMPLETED
+  CANCELLED
+}
+
+enum RelationshipType {
+  OWNER
+  CONTRACTOR
+  INSPECTOR
+  FINANCIER
+  SUPPLIER
+  SUBCONTRACTOR
+  OTHER
+}
+
+model Tenant {
+  id                   String                @id @default(uuid()) @db.Uuid
+  name                 String                @db.VarChar(200)
+  slug                 String                @unique @db.VarChar(100)
+  status               TenantStatus          @default(ACTIVE)
+  plan                 String                @default("starter") @db.VarChar(50)
+  members              TenantUser[]
+  organizations        Organization[]
+  projects             Project[]
+  projectUsers         ProjectUser[]
+  projectOrganizations ProjectOrganization[]
+  sessions             UserSession[]
+  resets               PasswordReset[]
+  audits               AuditLog[]
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("tenants")
+}
+
+model User {
+  id              String          @id @default(uuid()) @db.Uuid
+  name            String          @db.VarChar(200)
+  email           String          @unique @db.VarChar(254)
+  passwordHash    String          @map("password_hash")
+  status          UserStatus      @default(INVITED)
+  emailVerifiedAt DateTime?       @map("email_verified_at") @db.Timestamptz(6)
+  lastLoginAt     DateTime?       @map("last_login_at") @db.Timestamptz(6)
+  memberships     TenantUser[]
+  sessions        UserSession[]
+  resets          PasswordReset[]
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("users")
+}
+
+model TenantUser {
+  id           String           @id @default(uuid()) @db.Uuid
+  tenantId     String           @map("tenant_id") @db.Uuid
+  tenant       Tenant           @relation(fields: [tenantId], references: [id])
+  userId       String           @map("user_id") @db.Uuid
+  user         User             @relation(fields: [userId], references: [id])
+  role         Role
+  status       MembershipStatus @default(INVITED)
+  projectUsers ProjectUser[]
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, userId])
+  @@map("tenant_users")
+}
+
+model Organization {
+  id               String                @id @default(uuid()) @db.Uuid
+  tenantId         String                @map("tenant_id") @db.Uuid
+  tenant           Tenant                @relation(fields: [tenantId], references: [id])
+  legalName        String                @map("legal_name") @db.VarChar(200)
+  tradeName        String?               @map("trade_name") @db.VarChar(200)
+  taxNumber        String?               @map("tax_number") @db.VarChar(50)
+  organizationType OrganizationType      @map("organization_type")
+  phone            String?               @db.VarChar(40)
+  email            String?               @db.VarChar(254)
+  address          String?
+  projects         ProjectOrganization[]
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, id])
+  @@map("organizations")
+}
+
+model Project {
+  budgets Budget[]
+
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @map("tenant_id") @db.Uuid
+  tenant         Tenant                @relation(fields: [tenantId], references: [id])
+  code           String                @db.VarChar(50)
+  name           String                @db.VarChar(200)
+  description    String?
+  location       String?               @db.VarChar(250)
+  startDate      DateTime?             @map("start_date") @db.Date
+  plannedEndDate DateTime?             @map("planned_end_date") @db.Date
+  contractValue  Decimal?              @map("contract_value") @db.Decimal(18, 2)
+  currency       String                @default("MZN") @db.VarChar(3)
+  status         ProjectStatus         @default(PLANNING)
+  createdBy      String                @map("created_by") @db.Uuid
+  updatedBy      String                @map("updated_by") @db.Uuid
+  users          ProjectUser[]
+  organizations  ProjectOrganization[]
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, code])
+  @@unique([tenantId, id])
+  @@map("projects")
+}
+
+model ProjectUser {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  projectId  String           @map("project_id") @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  project    Project          @relation(fields: [tenantId, projectId], references: [tenantId, id])
+  membership TenantUser       @relation(fields: [tenantId, userId], references: [tenantId, userId])
+  role       Role
+  status     MembershipStatus @default(ACTIVE)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([projectId, userId])
+  @@index([tenantId, userId])
+  @@map("project_users")
+}
+
+model ProjectOrganization {
+  id               String           @id @default(uuid()) @db.Uuid
+  tenantId         String           @map("tenant_id") @db.Uuid
+  tenant           Tenant           @relation(fields: [tenantId], references: [id])
+  projectId        String           @map("project_id") @db.Uuid
+  organizationId   String           @map("organization_id") @db.Uuid
+  relationshipType RelationshipType @map("relationship_type")
+  project          Project          @relation(fields: [tenantId, projectId], references: [tenantId, id])
+  organization     Organization     @relation(fields: [tenantId, organizationId], references: [tenantId, id])
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([projectId, organizationId])
+  @@index([tenantId])
+  @@map("project_organizations")
+}
+
+model UserSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  userId           String    @map("user_id") @db.Uuid
+  user             User      @relation(fields: [userId], references: [id])
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  ipAddress        String?   @map("ip_address")
+  userAgent        String?   @map("user_agent")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, userId])
+  @@map("user_sessions")
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid()) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id])
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, userId])
+  @@map("password_resets")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  userId     String?  @map("user_id") @db.Uuid
+  projectId  String?  @map("project_id") @db.Uuid
+  entityType String   @map("entity_type") @db.VarChar(100)
+  entityId   String?  @map("entity_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  oldValues  Json?    @map("old_values") @db.JsonB
+  newValues  Json?    @map("new_values") @db.JsonB
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+enum BudgetStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum BudgetItemType {
+  GROUP
+  ITEM
+}
+
+enum BudgetRevisionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+  CANCELLED
+}
+
+enum BudgetImportStatus {
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+  CONFIRMED
+  CANCELLED
+}
+
+enum BudgetRowStatus {
+  VALID
+  INVALID
+  WARNING
+}
+
+model Budget {
+  id               String            @id @default(uuid()) @db.Uuid
+  tenantId         String            @map("tenant_id") @db.Uuid
+  projectId        String            @map("project_id") @db.Uuid
+  project          Project           @relation(fields: [tenantId, projectId], references: [tenantId, id])
+  name             String            @db.VarChar(200)
+  description      String?
+  status           BudgetStatus      @default(ACTIVE)
+  revisionSequence Int               @default(-1) @map("revision_sequence")
+  items            BudgetItem[]
+  revisions        BudgetRevision[]
+  imports          BudgetImportJob[]
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy        String            @map("created_by") @db.Uuid
+  updatedBy        String            @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("budgets")
+}
+
+model BudgetItem {
+  id          String                @id @default(uuid()) @db.Uuid
+  tenantId    String                @map("tenant_id") @db.Uuid
+  projectId   String                @map("project_id") @db.Uuid
+  budgetId    String                @map("budget_id") @db.Uuid
+  budget      Budget                @relation(fields: [tenantId, projectId, budgetId], references: [tenantId, projectId, id])
+  parentId    String?               @map("parent_id") @db.Uuid
+  code        String                @db.VarChar(100)
+  description String
+  itemType    BudgetItemType        @map("item_type")
+  unit        String?               @db.VarChar(30)
+  sortOrder   Int                   @default(0) @map("sort_order")
+  isActive    Boolean               @default(true) @map("is_active")
+  values      BudgetRevisionValue[]
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String                @map("created_by") @db.Uuid
+  updatedBy   String                @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, budgetId, id])
+  @@index([tenantId, projectId, budgetId, parentId])
+  @@index([budgetId, code])
+  @@map("budget_items")
+}
+
+model BudgetRevision {
+  id              String                @id @default(uuid()) @db.Uuid
+  tenantId        String                @map("tenant_id") @db.Uuid
+  projectId       String                @map("project_id") @db.Uuid
+  budgetId        String                @map("budget_id") @db.Uuid
+  budget          Budget                @relation(fields: [tenantId, projectId, budgetId], references: [tenantId, projectId, id])
+  revisionNumber  Int                   @map("revision_number")
+  code            String                @db.VarChar(30)
+  description     String?
+  status          BudgetRevisionStatus  @default(DRAFT)
+  version         Int                   @default(0)
+  createdBy       String                @map("created_by") @db.Uuid
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  submittedBy     String?               @map("submitted_by") @db.Uuid
+  submittedAt     DateTime?             @map("submitted_at") @db.Timestamptz(6)
+  approvedBy      String?               @map("approved_by") @db.Uuid
+  approvedAt      DateTime?             @map("approved_at") @db.Timestamptz(6)
+  rejectedBy      String?               @map("rejected_by") @db.Uuid
+  rejectedAt      DateTime?             @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason String?               @map("rejection_reason")
+  values          BudgetRevisionValue[]
+
+  @@unique([budgetId, revisionNumber])
+  @@unique([tenantId, budgetId, id])
+  @@index([tenantId, budgetId, status])
+  @@map("budget_revisions")
+}
+
+model BudgetRevisionValue {
+  id               String         @id @default(uuid()) @db.Uuid
+  tenantId         String         @map("tenant_id") @db.Uuid
+  budgetId         String         @map("budget_id") @db.Uuid
+  budgetRevisionId String         @map("budget_revision_id") @db.Uuid
+  budgetItemId     String         @map("budget_item_id") @db.Uuid
+  revision         BudgetRevision @relation(fields: [tenantId, budgetId, budgetRevisionId], references: [tenantId, budgetId, id])
+  item             BudgetItem     @relation(fields: [tenantId, budgetId, budgetItemId], references: [tenantId, budgetId, id])
+  parentId         String?        @map("parent_id") @db.Uuid
+  code             String         @db.VarChar(100)
+  description      String
+  itemType         BudgetItemType @map("item_type")
+  unit             String?        @db.VarChar(30)
+  sortOrder        Int            @default(0) @map("sort_order")
+  isActive         Boolean        @default(true) @map("is_active")
+  quantity         Decimal?       @db.Decimal(18, 4)
+  unitPrice        Decimal?       @map("unit_price") @db.Decimal(18, 2)
+  totalValue       Decimal        @default(0) @map("total_value") @db.Decimal(18, 2)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([budgetRevisionId, budgetItemId])
+  @@unique([budgetRevisionId, code])
+  @@index([tenantId, budgetId, budgetRevisionId])
+  @@map("budget_revision_values")
+}
+
+model BudgetImportJob {
+  id                  String             @id @default(uuid()) @db.Uuid
+  tenantId            String             @map("tenant_id") @db.Uuid
+  projectId           String             @map("project_id") @db.Uuid
+  budgetId            String?            @map("budget_id") @db.Uuid
+  budget              Budget?            @relation(fields: [tenantId, projectId, budgetId], references: [tenantId, projectId, id])
+  fileName            String             @map("file_name")
+  fileStorageKey      String             @map("file_storage_key")
+  fileChecksum        String             @map("file_checksum")
+  status              BudgetImportStatus @default(UPLOADED)
+  version             Int                @default(0)
+  mapping             Json?              @db.JsonB
+  headers             Json?              @db.JsonB
+  totalRows           Int                @default(0) @map("total_rows")
+  validRows           Int                @default(0) @map("valid_rows")
+  invalidRows         Int                @default(0) @map("invalid_rows")
+  previewTotal        Decimal            @default(0) @map("preview_total") @db.Decimal(18, 2)
+  createdBy           String             @map("created_by") @db.Uuid
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  processedAt         DateTime?          @map("processed_at") @db.Timestamptz(6)
+  confirmedAt         DateTime?          @map("confirmed_at") @db.Timestamptz(6)
+  confirmedRevisionId String?            @map("confirmed_revision_id") @db.Uuid
+  errorMessage        String?            @map("error_message")
+  rows                BudgetImportRow[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, projectId, status])
+  @@map("budget_import_jobs")
+}
+
+model BudgetImportRow {
+  id          String          @id @default(uuid()) @db.Uuid
+  tenantId    String          @map("tenant_id") @db.Uuid
+  importJobId String          @map("import_job_id") @db.Uuid
+  job         BudgetImportJob @relation(fields: [tenantId, importJobId], references: [tenantId, id])
+  rowNumber   Int             @map("row_number")
+  code        String?
+  description String?
+  unit        String?
+  quantity    Decimal?        @db.Decimal(18, 4)
+  unitPrice   Decimal?        @map("unit_price") @db.Decimal(18, 2)
+  parentCode  String?         @map("parent_code")
+  itemType    BudgetItemType  @default(ITEM) @map("item_type")
+  status      BudgetRowStatus
+  errors      Json?           @db.JsonB
+  rawData     Json            @map("raw_data") @db.JsonB
+
+  @@unique([importJobId, rowNumber])
+  @@index([tenantId, importJobId, status])
+  @@map("budget_import_rows")
+}
+
+enum ScheduleStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum WeightingMethod {
+  MANUAL
+  BUDGET_VALUE
+}
+
+enum ScheduleTaskType {
+  SUMMARY
+  TASK
+  MILESTONE
+}
+
+enum ScheduleTaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum DependencyType {
+  FS
+  SS
+  FF
+  SF
+}
+
+enum DailyLogStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REOPENED
+}
+
+enum EquipmentStatus {
+  OPERATING
+  IDLE
+  BROKEN
+  MAINTENANCE
+}
+
+enum OccurrenceType {
+  GENERAL
+  DELAY
+  SAFETY
+  QUALITY
+  WEATHER
+  ACCESS
+  MATERIAL
+  EQUIPMENT
+  CLIENT
+  OTHER
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FileVisibility {
+  INTERNAL
+  PROJECT_MEMBERS
+  CLIENT_VISIBLE
+  FINANCIER_VISIBLE
+  PUBLIC_PROJECT
+}
+
+model Schedule {
+  id               String          @id @default(uuid()) @db.Uuid
+  tenantId         String          @map("tenant_id") @db.Uuid
+  projectId        String          @map("project_id") @db.Uuid
+  createdBy        String          @map("created_by") @db.Uuid
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  name             String          @db.VarChar(200)
+  description      String?
+  status           ScheduleStatus  @default(DRAFT)
+  plannedStart     DateTime        @map("planned_start") @db.Date
+  plannedEnd       DateTime        @map("planned_end") @db.Date
+  baselineRevision Int             @default(-1) @map("baseline_revision")
+  weightingMethod  WeightingMethod @default(MANUAL) @map("weighting_method")
+  budgetRevisionId String?         @map("budget_revision_id") @db.Uuid
+  version          Int             @default(0)
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy        String          @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("schedules")
+}
+
+model ScheduleTask {
+  id             String             @id @default(uuid()) @db.Uuid
+  tenantId       String             @map("tenant_id") @db.Uuid
+  projectId      String             @map("project_id") @db.Uuid
+  createdBy      String             @map("created_by") @db.Uuid
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  scheduleId     String             @map("schedule_id") @db.Uuid
+  parentId       String?            @map("parent_id") @db.Uuid
+  code           String             @db.VarChar(100)
+  name           String             @db.VarChar(200)
+  description    String?
+  taskType       ScheduleTaskType   @map("task_type")
+  plannedStart   DateTime           @map("planned_start") @db.Date
+  plannedEnd     DateTime           @map("planned_end") @db.Date
+  actualStart    DateTime?          @map("actual_start") @db.Date
+  actualEnd      DateTime?          @map("actual_end") @db.Date
+  durationDays   Int                @map("duration_days")
+  actualProgress Decimal            @default(0) @map("actual_progress") @db.Decimal(5, 2)
+  weight         Decimal            @default(1) @db.Decimal(10, 6)
+  budgetItemId   String?            @map("budget_item_id") @db.Uuid
+  status         ScheduleTaskStatus @default(NOT_STARTED)
+  sortOrder      Int                @default(0) @map("sort_order")
+  version        Int                @default(0)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedBy      String             @map("updated_by") @db.Uuid
+
+  @@unique([scheduleId, code])
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, scheduleId, parentId])
+  @@index([tenantId, projectId])
+  @@map("schedule_tasks")
+}
+
+model TaskDependency {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @map("tenant_id") @db.Uuid
+  projectId      String         @map("project_id") @db.Uuid
+  createdBy      String         @map("created_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  scheduleId     String         @map("schedule_id") @db.Uuid
+  predecessorId  String         @map("predecessor_id") @db.Uuid
+  successorId    String         @map("successor_id") @db.Uuid
+  dependencyType DependencyType @default(FS) @map("dependency_type")
+  lagDays        Int            @default(0) @map("lag_days")
+
+  @@unique([predecessorId, successorId])
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("task_dependencies")
+}
+
+model ScheduleBaseline {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  createdBy      String   @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  scheduleId     String   @map("schedule_id") @db.Uuid
+  revisionNumber Int      @map("revision_number")
+  description    String?
+
+  @@unique([scheduleId, revisionNumber])
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("schedule_baselines")
+}
+
+model ScheduleBaselineTask {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  projectId    String   @map("project_id") @db.Uuid
+  createdBy    String   @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  baselineId   String   @map("baseline_id") @db.Uuid
+  taskId       String   @map("task_id") @db.Uuid
+  code         String
+  name         String
+  parentId     String?  @map("parent_id") @db.Uuid
+  plannedStart DateTime @map("planned_start") @db.Date
+  plannedEnd   DateTime @map("planned_end") @db.Date
+  durationDays Int      @map("duration_days")
+  weight       Decimal  @db.Decimal(10, 6)
+
+  @@unique([baselineId, taskId])
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("schedule_baseline_tasks")
+}
+
+model TaskProgressUpdate {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  projectId        String   @map("project_id") @db.Uuid
+  createdBy        String   @map("created_by") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  taskId           String   @map("task_id") @db.Uuid
+  progressDate     DateTime @map("progress_date") @db.Date
+  previousProgress Decimal  @map("previous_progress") @db.Decimal(5, 2)
+  newProgress      Decimal  @map("new_progress") @db.Decimal(5, 2)
+  notes            String?
+  dailyLogId       String?  @map("daily_log_id") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, progressDate])
+  @@index([tenantId, projectId])
+  @@map("task_progress_updates")
+}
+
+model ProjectProgressSnapshot {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  projectId       String   @map("project_id") @db.Uuid
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  snapshotDate    DateTime @map("snapshot_date") @db.Date
+  plannedProgress Decimal  @map("planned_progress") @db.Decimal(5, 2)
+  actualProgress  Decimal  @map("actual_progress") @db.Decimal(5, 2)
+
+  @@unique([projectId, snapshotDate])
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("project_progress_snapshots")
+}
+
+model DailyLog {
+  id               String         @id @default(uuid()) @db.Uuid
+  tenantId         String         @map("tenant_id") @db.Uuid
+  projectId        String         @map("project_id") @db.Uuid
+  createdBy        String         @map("created_by") @db.Uuid
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  logDate          DateTime       @map("log_date") @db.Date
+  status           DailyLogStatus @default(DRAFT)
+  weatherCondition String?        @map("weather_condition")
+  weatherNotes     String?        @map("weather_notes")
+  temperatureMin   Decimal?       @map("temperature_min") @db.Decimal(5, 2)
+  temperatureMax   Decimal?       @map("temperature_max") @db.Decimal(5, 2)
+  generalNotes     String?        @map("general_notes")
+  submittedBy      String?        @map("submitted_by") @db.Uuid
+  submittedAt      DateTime?      @map("submitted_at") @db.Timestamptz(6)
+  approvedBy       String?        @map("approved_by") @db.Uuid
+  approvedAt       DateTime?      @map("approved_at") @db.Timestamptz(6)
+  version          Int            @default(0)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([projectId, logDate])
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, logDate, status])
+  @@index([tenantId, projectId])
+  @@map("daily_logs")
+}
+
+model DailyLogActivity {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  projectId         String   @map("project_id") @db.Uuid
+  createdBy         String   @map("created_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId        String   @map("daily_log_id") @db.Uuid
+  scheduleTaskId    String?  @map("schedule_task_id") @db.Uuid
+  budgetItemId      String?  @map("budget_item_id") @db.Uuid
+  description       String
+  progressBefore    Decimal? @map("progress_before") @db.Decimal(5, 2)
+  progressAfter     Decimal? @map("progress_after") @db.Decimal(5, 2)
+  quantityCompleted Decimal? @map("quantity_completed") @db.Decimal(18, 4)
+  unit              String?
+  notes             String?
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_activities")
+}
+
+model DailyLogWorkforce {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  projectId      String   @map("project_id") @db.Uuid
+  createdBy      String   @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId     String   @map("daily_log_id") @db.Uuid
+  companyName    String   @map("company_name")
+  trade          String
+  workerCount    Int      @map("worker_count")
+  hoursPerWorker Decimal? @map("hours_per_worker") @db.Decimal(8, 2)
+  notes          String?
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_workforce")
+}
+
+model DailyLogEquipment {
+  id            String          @id @default(uuid()) @db.Uuid
+  tenantId      String          @map("tenant_id") @db.Uuid
+  projectId     String          @map("project_id") @db.Uuid
+  createdBy     String          @map("created_by") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId    String          @map("daily_log_id") @db.Uuid
+  equipmentName String          @map("equipment_name")
+  identifier    String?
+  quantity      Int             @default(1)
+  hoursWorked   Decimal?        @map("hours_worked") @db.Decimal(8, 2)
+  hoursIdle     Decimal?        @map("hours_idle") @db.Decimal(8, 2)
+  status        EquipmentStatus @default(OPERATING)
+  notes         String?
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_equipment")
+}
+
+model DailyLogMaterial {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  projectId    String   @map("project_id") @db.Uuid
+  createdBy    String   @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId   String   @map("daily_log_id") @db.Uuid
+  materialName String   @map("material_name")
+  quantity     Decimal  @db.Decimal(18, 4)
+  unit         String
+  budgetItemId String?  @map("budget_item_id") @db.Uuid
+  notes        String?
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_materials")
+}
+
+model DailyLogDelivery {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  projectId    String    @map("project_id") @db.Uuid
+  createdBy    String    @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId   String    @map("daily_log_id") @db.Uuid
+  supplierName String    @map("supplier_name")
+  description  String
+  quantity     Decimal?  @db.Decimal(18, 4)
+  unit         String?
+  document     String?
+  receivedBy   String?   @map("received_by")
+  deliveryTime DateTime? @map("delivery_time") @db.Time(0)
+  notes        String?
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_deliveries")
+}
+
+model DailyLogOccurrence {
+  id             String         @id @default(uuid()) @db.Uuid
+  tenantId       String         @map("tenant_id") @db.Uuid
+  projectId      String         @map("project_id") @db.Uuid
+  createdBy      String         @map("created_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId     String         @map("daily_log_id") @db.Uuid
+  occurrenceType OccurrenceType @map("occurrence_type")
+  title          String
+  description    String
+  severity       Severity       @default(LOW)
+  occurredAt     DateTime?      @map("occurred_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_occurrences")
+}
+
+model DailyLogObservation {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  createdBy  String   @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId String   @map("daily_log_id") @db.Uuid
+  text       String
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_observations")
+}
+
+model Document {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @map("tenant_id") @db.Uuid
+  projectId   String         @map("project_id") @db.Uuid
+  createdBy   String         @map("created_by") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId  String         @map("daily_log_id") @db.Uuid
+  objectKey   String         @unique @map("object_key")
+  fileName    String         @map("file_name")
+  mimeType    String         @map("mime_type")
+  sizeBytes   BigInt         @map("size_bytes")
+  checksum    String
+  visibility  FileVisibility @default(INTERNAL)
+  isPhoto     Boolean        @default(false) @map("is_photo")
+  confirmedAt DateTime?      @map("confirmed_at") @db.Timestamptz(6)
+  expiresAt   DateTime       @map("expires_at") @db.Timestamptz(6)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("documents")
+}
+
+model DailyLogPhoto {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  projectId      String    @map("project_id") @db.Uuid
+  createdBy      String    @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId     String    @map("daily_log_id") @db.Uuid
+  documentId     String    @unique @map("document_id") @db.Uuid
+  caption        String?
+  takenAt        DateTime? @map("taken_at") @db.Timestamptz(6)
+  scheduleTaskId String?   @map("schedule_task_id") @db.Uuid
+  budgetItemId   String?   @map("budget_item_id") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_photos")
+}
+
+model DailyLogDocument {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  createdBy  String   @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  dailyLogId String   @map("daily_log_id") @db.Uuid
+  documentId String   @unique @map("document_id") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId])
+  @@map("daily_log_documents")
+}

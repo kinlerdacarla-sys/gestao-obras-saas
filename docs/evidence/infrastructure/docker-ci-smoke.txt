@@ -1,0 +1,114 @@
+ Image core-saas-api Building 
+ Image core-saas-web Building 
+ Image core-saas-worker Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.00kB done
+#1 DONE 0.0s
+
+#2 [web internal] load build definition from Dockerfile
+#2 transferring dockerfile: 486B 0.0s done
+#2 DONE 0.0s
+
+#3 [auth] library/node:pull token for registry-1.docker.io
+#3 DONE 0.0s
+
+#4 [web internal] load metadata for docker.io/library/node:24-bookworm-slim
+#4 DONE 1.6s
+
+#5 [worker internal] load .dockerignore
+#5 transferring context: 152B done
+#5 DONE 0.0s
+
+#6 [web base 1/5] FROM docker.io/library/node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20
+#6 resolve docker.io/library/node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 0.0s done
+#6 DONE 0.0s
+
+#7 [web internal] load build context
+#7 transferring context: 8.78kB 0.0s done
+#7 transferring context: 8.78kB 0.0s done
+#7 DONE 0.0s
+
+#8 [worker base 3/5] WORKDIR /app
+#8 CACHED
+
+#9 [worker base 2/5] RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [worker base 4/5] COPY . .
+#10 CACHED
+
+#11 [web base 5/5] RUN npm ci && npm run generate
+#11 CACHED
+
+#12 [worker] exporting to image
+#12 exporting layers done
+#12 exporting manifest sha256:cc1c675677680347959cefba86de760a9de19dc8fd9b0ad8714556bc8bd28c71 done
+#12 exporting config sha256:068b5c25ef40d90602396befc465125d886d22de34420385c0d47845a6bac8cf 0.0s done
+#12 exporting attestation manifest sha256:a21b9f0fda6a7bbfbcab9c4c3a6d651ea9715a8c1d0d0b39b395139fe29bd775
+#12 exporting attestation manifest sha256:a21b9f0fda6a7bbfbcab9c4c3a6d651ea9715a8c1d0d0b39b395139fe29bd775 0.1s done
+#12 exporting manifest list sha256:4d97b74b3d143da1487bde28d9345c17e4407030bbe26eb3e68eff1441fc030e
+#12 exporting manifest list sha256:4d97b74b3d143da1487bde28d9345c17e4407030bbe26eb3e68eff1441fc030e 0.1s done
+#12 naming to docker.io/library/core-saas-worker:latest 0.0s done
+#12 unpacking to docker.io/library/core-saas-worker:latest
+#12 unpacking to docker.io/library/core-saas-worker:latest 0.0s done
+#12 DONE 0.4s
+
+#13 [api] exporting to image
+#13 exporting layers done
+#13 exporting manifest sha256:609395a8f7b1a26df34f93c82ada188f275f33310dd74fb98ce1bd9eb5c34248 0.0s done
+#13 exporting config sha256:611b38e1bc0b0ccaba3a994b6d5cc9d8658b478fabce4b31f07e3fea4aef99cb 0.0s done
+#13 exporting attestation manifest sha256:a74579560b5519e3f9e93a1e2c53d0a7e7b35358309338acf3890ab7385e78d8 0.1s done
+#13 exporting manifest list sha256:24ff6783ea0ddbdbdd65c3322961afa12c53acb5472245e2056947b117b5eb21 0.1s done
+#13 naming to docker.io/library/core-saas-api:latest 0.0s done
+#13 unpacking to docker.io/library/core-saas-api:latest 0.0s done
+#13 DONE 0.4s
+
+#14 [web] exporting to image
+#14 exporting layers done
+#14 exporting manifest sha256:2671e8dbe68e5cc76a96c291690fe7091502dd4caeda374a0567aa206b898732 done
+#14 exporting config sha256:2910e69ba60fc7c444bedf52ce5e2882d6c47700b3bfbafe339fcba6e9170fef 0.0s done
+#14 exporting attestation manifest sha256:cdd6243a072f324135ad47b7b14b27eb15d413b41feafeafaa1c0fc7f7165c54 0.1s done
+#14 exporting manifest list sha256:21e1dd898cd4c87b7df50aa069332db642dff37ab317f73978e5863fdf55e247 0.1s done
+#14 naming to docker.io/library/core-saas-web:latest 0.0s done
+#14 unpacking to docker.io/library/core-saas-web:latest 0.0s done
+#14 DONE 0.4s
+
+#15 [worker] resolving provenance for metadata file
+#15 ...
+
+#16 [web] resolving provenance for metadata file
+#16 DONE 0.1s
+
+#15 [worker] resolving provenance for metadata file
+#15 DONE 0.1s
+
+#17 [api] resolving provenance for metadata file
+#17 DONE 0.0s
+ Image core-saas-api Built 
+ Image core-saas-worker Built 
+ Image core-saas-web Built 
+ Container core-saas-api-1 Running 
+ Container core-saas-web-1 Running 
+ Container core-saas-worker-1 Running 
+ Container core-saas-postgres-1 Running 
+ Container core-saas-redis-1 Running 
+ Container core-saas-postgres-1 Waiting 
+ Container core-saas-redis-1 Waiting 
+ Container core-saas-postgres-1 Healthy 
+ Container core-saas-redis-1 Healthy 
+ Container core-saas-api-1 Waiting 
+ Container core-saas-api-1 Waiting 
+ Container core-saas-redis-1 Waiting 
+ Container core-saas-api-1 Healthy 
+ Container core-saas-api-1 Healthy 
+ Container core-saas-redis-1 Healthy 
+ Container core-saas-worker-1 Waiting 
+ Container core-saas-postgres-1 Waiting 
+ Container core-saas-redis-1 Waiting 
+ Container core-saas-api-1 Waiting 
+ Container core-saas-web-1 Waiting 
+ Container core-saas-redis-1 Healthy 
+ Container core-saas-worker-1 Healthy 
+ Container core-saas-api-1 Healthy 
+ Container core-saas-postgres-1 Healthy 
+ Container core-saas-web-1 Healthy 

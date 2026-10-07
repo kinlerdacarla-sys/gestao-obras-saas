@@ -1,0 +1,194 @@
+ Image core-saas-worker Building 
+ Image core-saas-web Building 
+ Image core-saas-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 2.00kB done
+#1 DONE 0.0s
+
+#2 [api internal] load build definition from Dockerfile
+#2 transferring dockerfile: 486B 0.0s done
+#2 DONE 0.1s
+
+#3 [web internal] load metadata for docker.io/library/node:24-bookworm-slim
+#3 ...
+
+#4 [auth] library/node:pull token for registry-1.docker.io
+#4 DONE 0.0s
+
+#3 [web internal] load metadata for docker.io/library/node:24-bookworm-slim
+#3 DONE 2.2s
+
+#5 [api internal] load .dockerignore
+#5 transferring context: 152B 0.0s done
+#5 DONE 0.1s
+
+#6 [web internal] load build context
+#6 DONE 0.0s
+
+#7 [web base 1/5] FROM docker.io/library/node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20
+#7 resolve docker.io/library/node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 0.0s done
+#7 resolve docker.io/library/node:24-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 0.0s done
+#7 DONE 0.0s
+
+#6 [api internal] load build context
+#6 transferring context: 1.04MB 0.2s done
+#6 DONE 0.3s
+
+#8 [worker base 2/5] RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+
+#9 [worker base 3/5] WORKDIR /app
+#9 CACHED
+
+#10 [worker base 4/5] COPY . .
+#10 DONE 0.1s
+
+#11 [web base 5/5] RUN npm ci && npm run generate
+#11 5.558 npm warn deprecated rimraf@2.7.1: Rimraf versions prior to v4 are no longer supported
+#11 12.64 npm warn deprecated lodash.isequal@4.5.0: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
+#11 15.78 npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+#11 17.04 npm warn deprecated glob@7.2.3: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+#11 17.59 npm warn deprecated fstream@1.0.12: This package is no longer supported.
+#11 23.98 npm warn deprecated eslint@9.39.5: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+#11 24.93 npm warn deprecated cron-parser@4.9.0: v4 is no longer maintained, upgrade to v5
+#11 209.3 
+#11 209.3 added 592 packages, and audited 601 packages in 3m
+#11 209.3 
+#11 209.3 135 packages are looking for funding
+#11 209.3   run `npm fund` for details
+#11 209.3 
+#11 209.3 found 0 vulnerabilities
+#11 209.3 npm warn install-scripts 6 packages have install scripts not yet covered by allowScripts:
+#11 209.3 npm warn install-scripts   @prisma/engines@7.10.0 (postinstall: node scripts/postinstall.js)
+#11 209.3 npm warn install-scripts   @scarf/scarf@1.4.0 (postinstall: node ./report.js)
+#11 209.3 npm warn install-scripts   argon2@0.44.0 (install: cross-env ZERO_AR_DATE=1 node-gyp-build)
+#11 209.3 npm warn install-scripts   esbuild@0.28.2 (postinstall: node install.js)
+#11 209.3 npm warn install-scripts   msgpackr-extract@3.0.4 (install: node-gyp-build-optional-packages)
+#11 209.3 npm warn install-scripts   prisma@7.10.0 (preinstall: node scripts/preinstall-entry.js)
+#11 209.3 npm warn install-scripts
+#11 209.3 npm warn install-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.
+#11 209.3 npm notice
+#11 209.3 npm notice New major version of npm available! 11.19.0 -> 12.2.0
+#11 209.3 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+#11 209.3 npm notice To update run: npm install -g npm@12.2.0
+#11 209.3 npm notice
+#11 209.5 
+#11 209.5 > generate
+#11 209.5 > prisma generate
+#11 209.5 
+#11 210.4 Loaded Prisma config from prisma.config.ts.
+#11 210.4 
+#11 210.5 Prisma schema loaded from prisma/schema.prisma.
+#11 210.8 
+#11 210.8 ✔ Generated Prisma Client (7.10.0) to ./apps/api/src/generated/prisma in 186ms
+#11 210.8 
+#11 DONE 211.0s
+
+#12 [web] exporting to image
+#12 exporting layers
+#12 ...
+
+#13 [worker] exporting to image
+#13 ...
+
+#14 [api] exporting to image
+#14 ...
+
+#13 [worker] exporting to image
+#13 exporting layers 34.7s done
+#13 exporting manifest sha256:cc1c675677680347959cefba86de760a9de19dc8fd9b0ad8714556bc8bd28c71 0.1s done
+#13 exporting config sha256:068b5c25ef40d90602396befc465125d886d22de34420385c0d47845a6bac8cf
+#13 exporting config sha256:068b5c25ef40d90602396befc465125d886d22de34420385c0d47845a6bac8cf 0.1s done
+#13 exporting attestation manifest sha256:2ac55301e9b17252a7dbe67e0e67966dc6544bc9335fafb40f3acf64975335f4 0.1s done
+#13 exporting manifest list sha256:b7671943b23ef9c3fbb1ece3d89c07062d45dd6b4b71705f55d3b375c67d4454
+#13 exporting manifest list sha256:b7671943b23ef9c3fbb1ece3d89c07062d45dd6b4b71705f55d3b375c67d4454 0.1s done
+#13 naming to docker.io/library/core-saas-worker:latest 0.0s done
+#13 unpacking to docker.io/library/core-saas-worker:latest
+#13 ...
+
+#14 [api] exporting to image
+#14 exporting layers 34.7s done
+#14 exporting manifest sha256:609395a8f7b1a26df34f93c82ada188f275f33310dd74fb98ce1bd9eb5c34248 0.1s done
+#14 exporting config sha256:611b38e1bc0b0ccaba3a994b6d5cc9d8658b478fabce4b31f07e3fea4aef99cb 0.1s done
+#14 exporting attestation manifest sha256:71480856061ae2f5e256b13c5cf26c6f0f4530a92649b96da052c90e45a5dd47 0.1s done
+#14 exporting manifest list sha256:591b9b573dbc964b45d3c370f0b6a5ea6dfa42a45fbe02d507bdc30440e0ea06 0.1s done
+#14 naming to docker.io/library/core-saas-api:latest 0.0s done
+#14 unpacking to docker.io/library/core-saas-api:latest
+#14 ...
+
+#12 [web] exporting to image
+#12 exporting layers 34.7s done
+#12 exporting manifest sha256:2671e8dbe68e5cc76a96c291690fe7091502dd4caeda374a0567aa206b898732 0.1s done
+#12 exporting config sha256:2910e69ba60fc7c444bedf52ce5e2882d6c47700b3bfbafe339fcba6e9170fef 0.1s done
+#12 exporting attestation manifest sha256:3cc596ca7647f4571bca3bc5566c2548f90c4d936a5b011b2ba90afb695139be 0.1s done
+#12 exporting manifest list sha256:4bc8c3403296e9a40d0071a1c01d482406104a8718af4345f2be142bc5f535c2 0.1s done
+#12 naming to docker.io/library/core-saas-web:latest 0.0s done
+#12 unpacking to docker.io/library/core-saas-web:latest
+#12 unpacking to docker.io/library/core-saas-web:latest 11.9s done
+#12 DONE 47.1s
+
+#14 [api] exporting to image
+#14 unpacking to docker.io/library/core-saas-api:latest 11.9s done
+#14 DONE 47.2s
+
+#13 [worker] exporting to image
+#13 unpacking to docker.io/library/core-saas-worker:latest 12.0s done
+#13 DONE 47.2s
+
+#15 [web] resolving provenance for metadata file
+#15 DONE 0.1s
+
+#16 [api] resolving provenance for metadata file
+#16 DONE 0.1s
+
+#17 [worker] resolving provenance for metadata file
+#17 DONE 0.0s
+ Image core-saas-api Built 
+ Image core-saas-web Built 
+ Image core-saas-worker Built 
+ Volume core-saas_budget_storage Creating 
+ Network core-saas_default Creating 
+ Volume core-saas_redis_data Creating 
+ Volume core-saas_postgres_data Creating 
+ Volume core-saas_redis_data Creating 
+ Network core-saas_default Creating 
+ Volume core-saas_budget_storage Creating 
+ Volume core-saas_postgres_data Creating 
+ Volume core-saas_redis_data Created 
+ Volume core-saas_redis_data Created 
+ Volume core-saas_postgres_data Created 
+ Volume core-saas_postgres_data Created 
+ Volume core-saas_budget_storage Created 
+ Volume core-saas_budget_storage Created 
+ Network core-saas_default Created 
+ Network core-saas_default Created 
+ Container core-saas-redis-1 Creating 
+ Container core-saas-postgres-1 Creating 
+ Container core-saas-redis-1 Created 
+ Container core-saas-postgres-1 Created 
+ Container core-saas-api-1 Creating 
+ Container core-saas-api-1 Created 
+ Container core-saas-worker-1 Creating 
+ Container core-saas-web-1 Creating 
+ Container core-saas-worker-1 Created 
+ Container core-saas-web-1 Created 
+ Container core-saas-redis-1 Starting 
+ Container core-saas-postgres-1 Starting 
+ Container core-saas-redis-1 Started 
+ Container core-saas-postgres-1 Started 
+ Container core-saas-redis-1 Waiting 
+ Container core-saas-postgres-1 Waiting 
+ Container core-saas-redis-1 Healthy 
+ Container core-saas-postgres-1 Healthy 
+ Container core-saas-api-1 Starting 
+ Container core-saas-api-1 Started 
+ Container core-saas-api-1 Waiting 
+ Container core-saas-api-1 Waiting 
+ Container core-saas-redis-1 Waiting 
+ Container core-saas-redis-1 Healthy 
+ Container core-saas-api-1 Healthy 
+ Container core-saas-worker-1 Starting 
+ Container core-saas-api-1 Healthy 
+ Container core-saas-web-1 Starting 
+ Container core-saas-worker-1 Started 
+ Container core-saas-web-1 Started 

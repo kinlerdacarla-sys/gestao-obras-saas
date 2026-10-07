@@ -1,0 +1,1 @@
+{"scheduler":true,"queue":"project-progress-snapshot","result":{"count":1,"date":"2026-10-07"}}

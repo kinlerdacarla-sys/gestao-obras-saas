@@ -1,0 +1,118 @@
+worker-1  | 
+worker-1  | > dev:worker
+worker-1  | > tsx watch apps/worker/src/main.ts
+api-1     | 
+worker-1  | 
+api-1     | > migrate
+api-1     | > prisma migrate deploy
+api-1     | 
+worker-1  | Worker ready: notifications
+api-1     | Loaded Prisma config from prisma.config.ts.
+api-1     | 
+api-1     | Prisma schema loaded from prisma/schema.prisma.
+api-1     | Datasource "db": PostgreSQL database "obras", schema "public" at "postgres:5432"
+api-1     | 
+api-1     | 4 migrations found in prisma/migrations
+api-1     | 
+api-1     | Applying migration `202610070001_core`
+api-1     | Applying migration `202610070002_integrity`
+api-1     | Applying migration `202610070003_budget`
+api-1     | Applying migration `202610070004_budget_integrity`
+api-1     | 
+api-1     | The following migration(s) have been applied:
+api-1     | 
+api-1     | migrations/
+api-1     |   └─ 202610070001_core/
+api-1     |     └─ migration.sql
+api-1     |   └─ 202610070002_integrity/
+api-1     |     └─ migration.sql
+api-1     |   └─ 202610070003_budget/
+api-1     |     └─ migration.sql
+api-1     |   └─ 202610070004_budget_integrity/
+api-1     |     └─ migration.sql
+api-1     | 
+api-1     | All migrations have been successfully applied.
+api-1     | 
+api-1     | > seed
+api-1     | > tsx prisma/seed.ts
+api-1     | 
+api-1     | Seed concluído: construtora-demo / admin@example.com
+api-1     | 
+api-1     | > dev:api
+api-1     | > tsx watch apps/api/src/main.ts
+api-1     | 
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [NestFactory] Starting Nest application...
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] PlatformModule dependencies initialized +27ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] NotificationModule dependencies initialized +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] TenantModule dependencies initialized +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] AppModule dependencies initialized +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] HealthModule dependencies initialized +2ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] AuditModule dependencies initialized +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] AuthModule dependencies initialized +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] OrganizationModule dependencies initialized +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] ProjectModule dependencies initialized +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] UserModule dependencies initialized +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [InstanceLoader] BudgetModule dependencies initialized +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RoutesResolver] AuthController {/api/v1/auth}: +27ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/login, POST} route +2ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/refresh, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/logout, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/forgot-password, POST} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/reset-password, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/auth/me, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RoutesResolver] UserController {/api/v1/users}: +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/users, GET} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/users/:id, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/users/invite, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/users/:id, PATCH} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/users/:id/disable, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RoutesResolver] OrganizationController {/api/v1/organizations}: +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/organizations, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/organizations/:id, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/organizations, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/organizations/:id, PATCH} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RoutesResolver] ProjectController {/api/v1/projects}: +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:id, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:id, PATCH} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:id/users, GET} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:id/users, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/users/:userId, PATCH} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/users/:userId, DELETE} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:id/organizations, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:id/organizations, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/organizations/:organizationId, DELETE} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RoutesResolver] DashboardController {/api/v1/dashboard}: +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/dashboard, GET} route +8ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RoutesResolver] AuditController {/api/v1/audit-logs}: +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/audit-logs, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RoutesResolver] HealthController {/health}: +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/health, GET} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RoutesResolver] BudgetController {/api/v1/projects/:projectId/budget}: +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/tree, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/items, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/items, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/items/:itemId, PATCH} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/items/:itemId, DELETE} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions/compare, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions/:revisionId, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions/:revisionId, PATCH} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions/:revisionId/submit, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions/:revisionId/approve, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions/:revisionId/reject, POST} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions/:revisionId/cancel, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/revisions/:revisionId/export, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/import/template, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/imports, POST} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/imports/:importJobId, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/imports/:importJobId/mapping, PATCH} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/imports/:importJobId/rows/:rowNumber, PATCH} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/imports/:importJobId/confirm, POST} route +1ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/imports/:importJobId/retry, POST} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [RouterExplorer] Mapped {/api/v1/projects/:projectId/budget/imports/:importJobId/original, GET} route +0ms
+api-1     | [Nest] 167  - 10/07/2026, 8:31:45 AM     LOG [NestApplication] Nest application successfully started +1ms
