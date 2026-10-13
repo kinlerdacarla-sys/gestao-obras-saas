@@ -11,6 +11,8 @@ test.beforeEach(async () => {
   await redis.quit();
 });
 async function login(page: Page, email: string) {
+  // Unload pending authenticated requests before switching identities.
+  await page.goto("about:blank");
   await page.context().clearCookies();
   await page.goto("/login");
   await page.getByLabel("Empresa").fill("construtora-demo");

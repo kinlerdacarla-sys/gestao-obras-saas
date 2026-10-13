@@ -198,6 +198,9 @@ test("M3 manager records mobile diary, admin approves, client sees authorized ph
     await expect(
       page.getByText("Registo guardado", { exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Guardar", exact: true }),
+    ).toBeEnabled();
   }
   await page.getByRole("button", { name: "Fotografias", exact: true }).click();
   const buffer = Buffer.from(

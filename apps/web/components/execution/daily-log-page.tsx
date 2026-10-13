@@ -436,12 +436,13 @@ export function DailyLogPage({ id, logId }: { id: string; logId: string }) {
   ) {
     if (!data) return;
     setError("");
+    setMessage("");
     await api(
       `${base}${path}`,
       send(method, { ...body, version: data.version }),
     );
-    setMessage("Registo guardado");
     await load();
+    setMessage("Registo guardado");
   }
   async function transition(action: string) {
     setBusy(true);

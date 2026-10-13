@@ -34,3 +34,7 @@ O seed foi executado no Docker e preserva dados existentes. [Conferência SQL do
 ## CI
 
 O workflow existente executa install, generate, migrations, lint, typecheck, unit, integration, seed, build e E2E; compose-smoke arranca uma stack nova no runner GitHub e verifica saúde/migrations. A execução do commit entregue deve concluir com os dois jobs verdes antes de declarar M5 pronta para M6. O relatório final inclui o link da execução remota correspondente.
+
+## Revalidação após CI remoto
+
+O primeiro CI identificou uma corrida na troca de sessão do E2E financeiro e uma sincronização prematura do diário. O teste descarrega a página antes de trocar cookies; o diário limpa a mensagem anterior e só confirma a gravação após carregar a nova versão. Após a correção, migrations, seed, lint, typecheck, build e os 11 E2E passaram novamente em Docker com PostgreSQL/Redis de testes recriados. [Log da revalidação](evidence/m5/ci-fix.txt). A stack local foi novamente reconstruída e os cinco serviços ficaram healthy.

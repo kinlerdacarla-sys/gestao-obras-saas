@@ -1,0 +1,149 @@
+time="2026-10-13T13:05:12+02:00" level=warning msg="Found orphan containers (core-saas-m5-completion, core-saas-m5-release, core-saas-m5-final, core-saas-m5-ui-3, core-saas-m5-check-2, core-saas-m5-baseline) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container core-saas-redis-test-1 Creating
+ Container core-saas-postgres-test-1 Creating
+ Container core-saas-postgres-test-1 Created
+ Container core-saas-redis-test-1 Created
+ Container core-saas-redis-test-1 Starting
+ Container core-saas-postgres-test-1 Starting
+ Container core-saas-redis-test-1 Started
+ Container core-saas-postgres-test-1 Started
+ Container core-saas-postgres-test-1 Waiting
+ Container core-saas-redis-test-1 Waiting
+ Container core-saas-postgres-test-1 Healthy
+ Container core-saas-redis-test-1 Healthy
+ Container core-saas-m5-ci-fix Creating
+ Container core-saas-m5-ci-fix Created
+
+> migrate
+> prisma migrate deploy
+
+Loaded Prisma config from prisma.config.ts.
+
+Prisma schema loaded from prisma/schema.prisma.
+Datasource "db": PostgreSQL database "obras_test", schema "public" at "postgres-test:5432"
+
+10 migrations found in prisma/migrations
+
+Applying migration `202610070001_core`
+Applying migration `202610070002_integrity`
+Applying migration `202610070003_budget`
+Applying migration `202610070004_budget_integrity`
+Applying migration `202610070005_execution`
+Applying migration `202610070006_execution_integrity`
+Applying migration `202610070007_commercial`
+Applying migration `202610070008_financial`
+Applying migration `202610070009_financial_integrity`
+Applying migration `202610070010_financial_upgrade`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 202610070001_core/
+    └─ migration.sql
+  └─ 202610070002_integrity/
+    └─ migration.sql
+  └─ 202610070003_budget/
+    └─ migration.sql
+  └─ 202610070004_budget_integrity/
+    └─ migration.sql
+  └─ 202610070005_execution/
+    └─ migration.sql
+  └─ 202610070006_execution_integrity/
+    └─ migration.sql
+  └─ 202610070007_commercial/
+    └─ migration.sql
+  └─ 202610070008_financial/
+    └─ migration.sql
+  └─ 202610070009_financial_integrity/
+    └─ migration.sql
+  └─ 202610070010_financial_upgrade/
+    └─ migration.sql
+
+All migrations have been successfully applied.
+
+> seed
+> tsx prisma/seed.ts
+
+Seed concluído: construtora-demo / admin@example.com
+
+> lint
+> eslint .
+
+
+> typecheck
+> tsc --noEmit && tsc -p tsconfig.tests.json && npm run typecheck -w @obras/web
+
+
+> typecheck
+> tsc --noEmit
+
+
+> build
+> tsc && npm run build -w @obras/web
+
+
+> build
+> next build
+
+▲ Next.js 16.4.0 (Turbopack)
+✓ Running next.config.ts took 34ms
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+- Experiments (use with caution):
+  · proxyClientMaxBodySize: "21mb"
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.1s
+  Running TypeScript ...
+  Finished TypeScript in 4.4s ...
+  Collecting page data using 23 workers ...
+  Generating static pages using 23 workers (0/11) ...
+  Generating static pages using 23 workers (2/11)
+  Generating static pages using 23 workers (5/11)
+  Generating static pages using 23 workers (8/11)
+✓ Generating static pages using 23 workers (11/11) in 487ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /dashboard
+├ ○ /forgot-password
+├ ○ /login
+├ ○ /projects
+├ ƒ /projects/[id]
+├ ƒ /projects/[id]/budget
+├ ƒ /projects/[id]/budget/compare
+├ ƒ /projects/[id]/budget/import
+├ ƒ /projects/[id]/budget/revisions
+├ ƒ /projects/[id]/contracts
+├ ƒ /projects/[id]/contracts/[contractId]
+├ ƒ /projects/[id]/contracts/[contractId]/financial
+├ ƒ /projects/[id]/cost-centers
+├ ƒ /projects/[id]/costs
+├ ƒ /projects/[id]/daily-logs
+├ ƒ /projects/[id]/daily-logs/[logId]
+├ ƒ /projects/[id]/expenses
+├ ƒ /projects/[id]/expenses/[expenseId]
+├ ƒ /projects/[id]/financial
+├ ƒ /projects/[id]/funding
+├ ƒ /projects/[id]/measurements
+├ ƒ /projects/[id]/measurements/[measurementId]
+├ ƒ /projects/[id]/payments
+├ ƒ /projects/[id]/schedule
+├ ○ /reset-password
+├ ○ /settings/organizations
+├ ○ /settings/users
+└ ○ /suppliers
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> test:e2e
+> playwright test
+
+
+Running 11 tests using 1 worker
+···········
+  11 passed (1.2m)
