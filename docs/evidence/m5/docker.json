@@ -1,0 +1,27 @@
+[
+  {
+    "Service": "api",
+    "State": "running",
+    "Health": "healthy"
+  },
+  {
+    "Service": "postgres",
+    "State": "running",
+    "Health": "healthy"
+  },
+  {
+    "Service": "redis",
+    "State": "running",
+    "Health": "healthy"
+  },
+  {
+    "Service": "web",
+    "State": "running",
+    "Health": "healthy"
+  },
+  {
+    "Service": "worker",
+    "State": "running",
+    "Health": "healthy"
+  }
+]

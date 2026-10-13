@@ -17,7 +17,8 @@ import { ApiConsumes, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 import type { ApiRequest } from "../auth/security.js";
 import { fail } from "../platform.js";
-import { DocumentService } from "../document/document.module.js";
+import { document as financialDocument } from "../../../../packages/validation/src/financial.js";
+import { DocumentService, ownerWhere } from "../document/document.module.js";
 import { RequestDoc } from "../docs.js";
 import {
   documentInput,
@@ -29,7 +30,13 @@ const owner = (kind: string) =>
     ? "expense"
     : kind === "contracts"
       ? "contract"
-      : fail(404, "RESOURCE_NOT_FOUND", "Recurso não encontrado");
+      : kind === "measurements"
+        ? "measurement"
+        : kind === "funding-agreements"
+          ? "fundingAgreement"
+          : kind === "payments"
+            ? "payment"
+            : fail(404, "RESOURCE_NOT_FOUND", "Recurso não encontrado");
 @ApiTags("Commercial documents")
 @Controller("api/v1/projects/:projectId/:kind/:ownerId/documents")
 export class CommercialDocumentController {
@@ -42,8 +49,9 @@ export class CommercialDocumentController {
   ) {
     const o = owner(k),
       { scope } = await this.s.authorize(r, uuid.parse(p), o);
-    const record =
-      o === "expense"
+    const record = ["measurement", "fundingAgreement", "payment"].includes(o)
+      ? await this.s.financialRecord(this.s.db, scope, uuid.parse(id), o)
+      : o === "expense"
         ? await this.s.db.expense.findFirst({
             where: { ...scope, id: uuid.parse(id) },
           })
@@ -61,9 +69,7 @@ export class CommercialDocumentController {
         await this.s.db.document.findMany({
           where: {
             ...scope,
-            ...(o === "expense"
-              ? { expenseId: uuid.parse(id) }
-              : { contractId: uuid.parse(id) }),
+            ...ownerWhere(o, uuid.parse(id)),
             confirmedAt: { not: null },
             deletedAt: null,
           },
@@ -87,7 +93,9 @@ export class CommercialDocumentController {
     @Param("ownerId") id: string,
     @Body() b: unknown,
   ) {
-    const i = documentInput.parse(b);
+    const i = ["measurements", "funding-agreements", "payments"].includes(k)
+      ? financialDocument.parse(b)
+      : documentInput.parse(b);
     return this.s.ticket(
       r,
       uuid.parse(p),

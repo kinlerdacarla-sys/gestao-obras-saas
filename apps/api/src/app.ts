@@ -1,4 +1,10 @@
+import { completeFinancialDocs } from "./financial/docs.js";
 import "reflect-metadata";
+import {
+  MeasurementModule,
+  FundingModule,
+  PaymentModule,
+} from "./financial/financial.module.js";
 import { Module } from "@nestjs/common";
 import { APP_GUARD, NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -31,6 +37,9 @@ import { completeExecutionDocs } from "./schedule/docs.js";
 @Module({
   imports: [
     PlatformModule,
+    MeasurementModule,
+    FundingModule,
+    PaymentModule,
     AuthModule,
     TenantModule,
     UserModule,
@@ -64,9 +73,9 @@ export async function createApp() {
     const config = new DocumentBuilder()
       .setTitle("Obras • Core SaaS")
       .setDescription(
-        "M1 + M2 + M3 + M4. Cookies HttpOnly; mutações exigem Origin igual a WEB_ORIGIN. Valores monetários e progresso são strings decimais.",
+        "M1 + M2 + M3 + M4 + M5. Cookies HttpOnly; mutações exigem Origin igual a WEB_ORIGIN. Valores monetários e progresso são strings decimais.",
       )
-      .setVersion("4.0.0")
+      .setVersion("5.0.0")
       .addCookieAuth("access")
       .build();
     const document = SwaggerModule.createDocument(app, config);
@@ -74,6 +83,7 @@ export async function createApp() {
     completeBudgetDocs(document);
     completeExecutionDocs(document);
     completeCommercialDocs(document);
+    completeFinancialDocs(document);
     document.security = [{ access: [] }];
     SwaggerModule.setup("api/docs", app, document);
   }

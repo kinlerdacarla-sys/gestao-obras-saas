@@ -1,0 +1,9 @@
+  code   |     status     | gross_amount | retention_amount | advance_recovery_amount | net_certified_amount |   paid
+---------+----------------+--------------+------------------+-------------------------+----------------------+-----------
+ MED-001 | PARTIALLY_PAID |   1000000.00 |         50000.00 |               100000.00 |            850000.00 | 500000.00
+(1 row)
+
+ agreement_number | approved_amount | disbursed
+------------------+-----------------+------------
+ FIN-DEMO-001     |     15000000.00 | 2000000.00
+(1 row)

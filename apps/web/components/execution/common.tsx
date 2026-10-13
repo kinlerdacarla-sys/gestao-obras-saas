@@ -101,42 +101,51 @@ export function EntryForm({
       <form onSubmit={save}>
         <fieldset disabled={busy}>
           <div className="execution-fields">
-            {fields.map((f) => (
-              <label key={f.name}>
-                {f.label}
-                {f.options ? (
-                  <select
-                    name={f.name}
-                    defaultValue={f.value ?? ""}
-                    required={f.required}
-                  >
-                    {!f.required && <option value="">—</option>}
-                    {f.options.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : f.type === "textarea" ? (
-                  <textarea
-                    name={f.name}
-                    defaultValue={f.value}
-                    required={f.required}
-                    rows={3}
-                  />
-                ) : (
-                  <input
-                    name={f.name}
-                    type={f.type ?? "text"}
-                    defaultValue={f.value}
-                    required={f.required}
-                    min={f.min}
-                    max={f.max}
-                    step={f.step}
-                  />
-                )}
-              </label>
-            ))}
+            {fields.map((f) =>
+              f.type === "hidden" ? (
+                <input
+                  key={f.name}
+                  type="hidden"
+                  name={f.name}
+                  value={f.value ?? ""}
+                />
+              ) : (
+                <label key={f.name}>
+                  {f.label}
+                  {f.options ? (
+                    <select
+                      name={f.name}
+                      defaultValue={f.value ?? ""}
+                      required={f.required}
+                    >
+                      {!f.required && <option value="">—</option>}
+                      {f.options.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : f.type === "textarea" ? (
+                    <textarea
+                      name={f.name}
+                      defaultValue={f.value}
+                      required={f.required}
+                      rows={3}
+                    />
+                  ) : (
+                    <input
+                      name={f.name}
+                      type={f.type ?? "text"}
+                      defaultValue={f.value}
+                      required={f.required}
+                      min={f.min}
+                      max={f.max}
+                      step={f.step}
+                    />
+                  )}
+                </label>
+              ),
+            )}
           </div>
           <div className="actions">
             <button type="submit">{busy ? "A guardar…" : submit}</button>

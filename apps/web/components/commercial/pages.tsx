@@ -71,6 +71,7 @@ function Nav({ id }: { id?: string }) {
       {id && (
         <>
           <Link href={`/projects/${id}/contracts`}>Contratos</Link>
+          <Link href={`/projects/${id}/measurements`}>Medições</Link>
           {["ADMIN", "MANAGER"].includes(me.role) && (
             <>
               <Link href={`/projects/${id}/expenses`}>Despesas</Link>
@@ -601,16 +602,18 @@ export function ContractsPage({ id }: { id: string }) {
     </>
   );
 }
-function Documents({
+export function Documents({
   path,
   version,
   editable,
   onChange,
+  financial = false,
 }: {
   path: string;
   version: number;
   editable: boolean;
   onChange: () => Promise<void>;
+  financial?: boolean;
 }) {
   const { data, error, setError, load } = useRows(`${path}/documents`),
     [busy, setBusy] = useState(false),
@@ -624,13 +627,24 @@ function Documents({
           <label>
             Tipo de comprovativo
             <select value={type} onChange={(e) => setType(e.target.value)}>
-              {opts([
-                "INVOICE",
-                "RECEIPT",
-                "DELIVERY_NOTE",
-                "PURCHASE_ORDER",
-                "OTHER",
-              ]).map((o) => (
+              {opts(
+                financial
+                  ? [
+                      "MEASUREMENT_SHEET",
+                      "CERTIFICATE",
+                      "INVOICE",
+                      "PAYMENT_PROOF",
+                      "DISBURSEMENT_PROOF",
+                      "OTHER",
+                    ]
+                  : [
+                      "INVOICE",
+                      "RECEIPT",
+                      "DELIVERY_NOTE",
+                      "PURCHASE_ORDER",
+                      "OTHER",
+                    ],
+              ).map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -843,6 +857,9 @@ export function ContractDetail({
         {row.contractNumber} · {row.title}
       </h1>
       <Nav id={id} />
+      <Link href={`/projects/${id}/contracts/${contractId}/financial`}>
+        Retenções e adiantamentos
+      </Link>
       <p>
         {row.supplierName} ·{" "}
         <span className="badge">{states[txt(row.status)]}</span>

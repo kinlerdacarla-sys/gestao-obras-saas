@@ -815,6 +815,10 @@ model DailyLogObservation {
 }
 
 model Document {
+  measurementId      String? @map("measurement_id") @db.Uuid
+  fundingAgreementId String? @map("funding_agreement_id") @db.Uuid
+  paymentId          String? @map("payment_id") @db.Uuid
+
   id          String         @id @default(uuid()) @db.Uuid
   tenantId    String         @map("tenant_id") @db.Uuid
   projectId   String         @map("project_id") @db.Uuid
@@ -969,29 +973,34 @@ model Supplier {
 }
 
 model Contract {
-  id                     String         @id @default(uuid()) @db.Uuid
-  tenantId               String         @map("tenant_id") @db.Uuid
-  projectId              String         @map("project_id") @db.Uuid
-  supplierId             String         @map("supplier_id") @db.Uuid
-  contractNumber         String         @map("contract_number") @db.VarChar(100)
-  title                  String
-  description            String?
-  contractType           ContractType   @map("contract_type")
-  originalValue          Decimal        @map("original_value") @db.Decimal(18, 2)
-  currentValue           Decimal        @map("current_value") @db.Decimal(18, 2)
-  retentionPercentage    Decimal        @default(0) @map("retention_percentage") @db.Decimal(5, 2)
-  advancePercentage      Decimal        @default(0) @map("advance_percentage") @db.Decimal(5, 2)
-  advanceAmount          Decimal        @default(0) @map("advance_amount") @db.Decimal(18, 2)
-  advanceRecoveredAmount Decimal        @default(0) @map("advance_recovered_amount") @db.Decimal(18, 2)
-  startDate              DateTime?      @map("start_date") @db.Date
-  endDate                DateTime?      @map("end_date") @db.Date
-  status                 ContractStatus @default(DRAFT)
-  amendmentSequence      Int            @default(0) @map("amendment_sequence")
-  version                Int            @default(0)
-  createdAt              DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt              DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
-  createdBy              String         @map("created_by") @db.Uuid
-  updatedBy              String         @map("updated_by") @db.Uuid
+  advanceRecoveryMethod      AdvanceRecoveryMethod @default(MANUAL) @map("advance_recovery_method")
+  advanceRecoveryPercentage  Decimal?              @map("advance_recovery_percentage") @db.Decimal(5, 2)
+  advanceRecoveryFixedAmount Decimal?              @map("advance_recovery_fixed_amount") @db.Decimal(18, 2)
+  finalApprovalRole          Role                  @default(FINANCIER) @map("final_approval_role")
+  measurementSequence        Int                   @default(0) @map("measurement_sequence")
+  id                         String                @id @default(uuid()) @db.Uuid
+  tenantId                   String                @map("tenant_id") @db.Uuid
+  projectId                  String                @map("project_id") @db.Uuid
+  supplierId                 String                @map("supplier_id") @db.Uuid
+  contractNumber             String                @map("contract_number") @db.VarChar(100)
+  title                      String
+  description                String?
+  contractType               ContractType          @map("contract_type")
+  originalValue              Decimal               @map("original_value") @db.Decimal(18, 2)
+  currentValue               Decimal               @map("current_value") @db.Decimal(18, 2)
+  retentionPercentage        Decimal               @default(0) @map("retention_percentage") @db.Decimal(5, 2)
+  advancePercentage          Decimal               @default(0) @map("advance_percentage") @db.Decimal(5, 2)
+  advanceAmount              Decimal               @default(0) @map("advance_amount") @db.Decimal(18, 2)
+  advanceRecoveredAmount     Decimal               @default(0) @map("advance_recovered_amount") @db.Decimal(18, 2)
+  startDate                  DateTime?             @map("start_date") @db.Date
+  endDate                    DateTime?             @map("end_date") @db.Date
+  status                     ContractStatus        @default(DRAFT)
+  amendmentSequence          Int                   @default(0) @map("amendment_sequence")
+  version                    Int                   @default(0)
+  createdAt                  DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy                  String                @map("created_by") @db.Uuid
+  updatedBy                  String                @map("updated_by") @db.Uuid
 
   @@unique([tenantId, projectId, id])
   @@unique([tenantId, projectId, contractNumber])
@@ -1165,4 +1174,535 @@ model ContractDocument {
   @@unique([tenantId, projectId, id])
   @@index([tenantId, projectId, contractId])
   @@map("contract_documents")
+}
+
+enum MeasurementStatus {
+  DRAFT
+  SUBMITTED
+  FISCAL_REVIEW
+  FISCAL_REJECTED
+  APPROVAL_REVIEW
+  APPROVED
+  CERTIFIED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum AdvanceRecoveryMethod {
+  PERCENTAGE
+  FIXED
+  MANUAL
+}
+
+enum RetentionTransactionType {
+  WITHHELD
+  RELEASED
+  REVERSED
+}
+
+enum AdvanceTransactionType {
+  ADVANCE_GRANTED
+  ADVANCE_RECOVERED
+  ADVANCE_REVERSED
+}
+
+enum RetentionReleaseStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum MeasurementDeductionType {
+  PENALTY
+  ADVANCE_RECOVERY
+  OTHER
+}
+
+enum MeasurementReviewType {
+  FISCAL
+  CLIENT
+  FINANCIER
+  ADMIN
+}
+
+enum MeasurementDecision {
+  APPROVED
+  REJECTED
+  REQUEST_CHANGES
+}
+
+enum FundingAgreementStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  CLOSED
+  CANCELLED
+}
+
+enum DisbursementRequestStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  PARTIALLY_DISBURSED
+  DISBURSED
+  REJECTED
+  CANCELLED
+}
+
+enum FinancialPostingStatus {
+  POSTED
+  REVERSED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CASH
+  CHEQUE
+  MOBILE_MONEY
+  OTHER
+}
+
+enum FinancialDocumentType {
+  MEASUREMENT_SHEET
+  CERTIFICATE
+  INVOICE
+  PAYMENT_PROOF
+  DISBURSEMENT_PROOF
+  OTHER
+}
+
+model Measurement {
+  id                    String            @id @default(uuid()) @db.Uuid
+  tenantId              String            @map("tenant_id") @db.Uuid
+  projectId             String            @map("project_id") @db.Uuid
+  contractId            String            @map("contract_id") @db.Uuid
+  measurementNumber     Int               @map("measurement_number")
+  code                  String
+  periodStart           DateTime          @map("period_start") @db.Date
+  periodEnd             DateTime          @map("period_end") @db.Date
+  description           String?
+  status                MeasurementStatus @default(DRAFT)
+  grossAmount           Decimal           @default(0) @map("gross_amount") @db.Decimal(18, 2)
+  retentionAmount       Decimal           @default(0) @map("retention_amount") @db.Decimal(18, 2)
+  advanceRecoveryAmount Decimal           @default(0) @map("advance_recovery_amount") @db.Decimal(18, 2)
+  otherDeductionsAmount Decimal           @default(0) @map("other_deductions_amount") @db.Decimal(18, 2)
+  netCertifiedAmount    Decimal           @default(0) @map("net_certified_amount") @db.Decimal(18, 2)
+  manualAdvanceRecovery Decimal           @default(0) @map("manual_advance_recovery") @db.Decimal(18, 2)
+  submittedBy           String?           @map("submitted_by") @db.Uuid
+  submittedAt           DateTime?         @map("submitted_at") @db.Timestamptz(6)
+  fiscalReviewedBy      String?           @map("fiscal_reviewed_by") @db.Uuid
+  fiscalReviewedAt      DateTime?         @map("fiscal_reviewed_at") @db.Timestamptz(6)
+  approvedBy            String?           @map("approved_by") @db.Uuid
+  approvedAt            DateTime?         @map("approved_at") @db.Timestamptz(6)
+  certifiedBy           String?           @map("certified_by") @db.Uuid
+  certifiedAt           DateTime?         @map("certified_at") @db.Timestamptz(6)
+  rejectedBy            String?           @map("rejected_by") @db.Uuid
+  rejectedAt            DateTime?         @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason       String?           @map("rejection_reason")
+  version               Int               @default(0)
+  createdAt             DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy             String            @map("created_by") @db.Uuid
+  updatedBy             String            @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([contractId, measurementNumber])
+  @@index([tenantId, projectId, status, createdAt])
+  @@index([tenantId, projectId, contractId, status])
+  @@map("measurements")
+}
+
+model MeasurementItem {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  projectId          String   @map("project_id") @db.Uuid
+  measurementId      String   @map("measurement_id") @db.Uuid
+  contractItemId     String   @map("contract_item_id") @db.Uuid
+  budgetItemId       String?  @map("budget_item_id") @db.Uuid
+  description        String
+  unit               String?
+  contractQuantity   Decimal  @map("contract_quantity") @db.Decimal(18, 4)
+  previousQuantity   Decimal  @map("previous_quantity") @db.Decimal(18, 4)
+  currentQuantity    Decimal  @map("current_quantity") @db.Decimal(18, 4)
+  cumulativeQuantity Decimal  @map("cumulative_quantity") @db.Decimal(18, 4)
+  unitPrice          Decimal  @default(0) @map("unit_price") @db.Decimal(18, 2)
+  previousAmount     Decimal  @default(0) @map("previous_amount") @db.Decimal(18, 2)
+  currentAmount      Decimal  @default(0) @map("current_amount") @db.Decimal(18, 2)
+  cumulativeAmount   Decimal  @default(0) @map("cumulative_amount") @db.Decimal(18, 2)
+  version            Int      @default(0)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy          String   @map("created_by") @db.Uuid
+  updatedBy          String   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([measurementId, contractItemId])
+  @@index([tenantId, projectId, measurementId])
+  @@index([tenantId, projectId, contractItemId])
+  @@map("measurement_items")
+}
+
+model RetentionTransaction {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  tenantId           String                   @map("tenant_id") @db.Uuid
+  projectId          String                   @map("project_id") @db.Uuid
+  contractId         String                   @map("contract_id") @db.Uuid
+  measurementId      String?                  @map("measurement_id") @db.Uuid
+  retentionReleaseId String?                  @map("retention_release_id") @db.Uuid
+  type               RetentionTransactionType
+  amount             Decimal                  @db.Decimal(18, 2)
+  description        String?
+  version            Int                      @default(0)
+  createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy          String                   @map("created_by") @db.Uuid
+  updatedBy          String                   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([measurementId, type])
+  @@index([tenantId, projectId, contractId, type])
+  @@map("retention_transactions")
+}
+
+model AdvanceTransaction {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  tenantId           String                 @map("tenant_id") @db.Uuid
+  projectId          String                 @map("project_id") @db.Uuid
+  contractId         String                 @map("contract_id") @db.Uuid
+  measurementId      String?                @map("measurement_id") @db.Uuid
+  retentionReleaseId String?                @map("retention_release_id") @db.Uuid
+  type               AdvanceTransactionType
+  amount             Decimal                @db.Decimal(18, 2)
+  description        String?
+  version            Int                    @default(0)
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy          String                 @map("created_by") @db.Uuid
+  updatedBy          String                 @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([measurementId, type])
+  @@index([tenantId, projectId, contractId, type])
+  @@map("advance_transactions")
+}
+
+model RetentionRelease {
+  id         String                 @id @default(uuid()) @db.Uuid
+  tenantId   String                 @map("tenant_id") @db.Uuid
+  projectId  String                 @map("project_id") @db.Uuid
+  contractId String                 @map("contract_id") @db.Uuid
+  amount     Decimal                @db.Decimal(18, 2)
+  reason     String
+  status     RetentionReleaseStatus @default(DRAFT)
+  approvedBy String?                @map("approved_by") @db.Uuid
+  approvedAt DateTime?              @map("approved_at") @db.Timestamptz(6)
+  version    Int                    @default(0)
+  createdAt  DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy  String                 @map("created_by") @db.Uuid
+  updatedBy  String                 @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, contractId, status])
+  @@map("retention_releases")
+}
+
+model MeasurementDeduction {
+  id            String                   @id @default(uuid()) @db.Uuid
+  tenantId      String                   @map("tenant_id") @db.Uuid
+  projectId     String                   @map("project_id") @db.Uuid
+  measurementId String                   @map("measurement_id") @db.Uuid
+  type          MeasurementDeductionType
+  description   String
+  amount        Decimal                  @db.Decimal(18, 2)
+  version       Int                      @default(0)
+  createdAt     DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy     String                   @map("created_by") @db.Uuid
+  updatedBy     String                   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, measurementId])
+  @@map("measurement_deductions")
+}
+
+model MeasurementReview {
+  id            String                @id @default(uuid()) @db.Uuid
+  tenantId      String                @map("tenant_id") @db.Uuid
+  projectId     String                @map("project_id") @db.Uuid
+  measurementId String                @map("measurement_id") @db.Uuid
+  reviewType    MeasurementReviewType @map("review_type")
+  decision      MeasurementDecision
+  comments      String?
+  reviewedBy    String                @map("reviewed_by") @db.Uuid
+  reviewedAt    DateTime              @map("reviewed_at") @db.Timestamptz(6)
+  version       Int                   @default(0)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy     String                @map("created_by") @db.Uuid
+  updatedBy     String                @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, measurementId, createdAt])
+  @@map("measurement_reviews")
+}
+
+model MeasurementTransition {
+  id            String            @id @default(uuid()) @db.Uuid
+  tenantId      String            @map("tenant_id") @db.Uuid
+  projectId     String            @map("project_id") @db.Uuid
+  measurementId String            @map("measurement_id") @db.Uuid
+  fromStatus    MeasurementStatus @map("from_status")
+  toStatus      MeasurementStatus @map("to_status")
+  comments      String?
+  version       Int               @default(0)
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy     String            @map("created_by") @db.Uuid
+  updatedBy     String            @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, measurementId, createdAt])
+  @@map("measurement_transitions")
+}
+
+model MeasurementReversal {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  projectId     String   @map("project_id") @db.Uuid
+  measurementId String   @map("measurement_id") @db.Uuid
+  reason        String
+  version       Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy     String   @map("created_by") @db.Uuid
+  updatedBy     String   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([measurementId])
+  @@map("measurement_reversals")
+}
+
+model FundingAgreement {
+  id                      String                 @id @default(uuid()) @db.Uuid
+  tenantId                String                 @map("tenant_id") @db.Uuid
+  projectId               String                 @map("project_id") @db.Uuid
+  financierOrganizationId String                 @map("financier_organization_id") @db.Uuid
+  agreementNumber         String                 @map("agreement_number")
+  title                   String
+  description             String?
+  approvedAmount          Decimal                @map("approved_amount") @db.Decimal(18, 2)
+  startDate               DateTime               @map("start_date") @db.Date
+  endDate                 DateTime?              @map("end_date") @db.Date
+  status                  FundingAgreementStatus @default(DRAFT)
+  requestSequence         Int                    @default(0) @map("request_sequence")
+  version                 Int                    @default(0)
+  createdAt               DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy               String                 @map("created_by") @db.Uuid
+  updatedBy               String                 @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, agreementNumber])
+  @@index([tenantId, projectId, status])
+  @@map("funding_agreements")
+}
+
+model DisbursementRequest {
+  id                 String                    @id @default(uuid()) @db.Uuid
+  tenantId           String                    @map("tenant_id") @db.Uuid
+  projectId          String                    @map("project_id") @db.Uuid
+  fundingAgreementId String                    @map("funding_agreement_id") @db.Uuid
+  measurementId      String?                   @map("measurement_id") @db.Uuid
+  requestNumber      Int                       @map("request_number")
+  requestedAmount    Decimal                   @map("requested_amount") @db.Decimal(18, 2)
+  approvedAmount     Decimal?                  @map("approved_amount") @db.Decimal(18, 2)
+  disbursedAmount    Decimal                   @default(0) @map("disbursed_amount") @db.Decimal(18, 2)
+  status             DisbursementRequestStatus @default(DRAFT)
+  description        String?
+  requestedBy        String                    @map("requested_by") @db.Uuid
+  requestedAt        DateTime                  @map("requested_at") @db.Timestamptz(6)
+  approvedBy         String?                   @map("approved_by") @db.Uuid
+  approvedAt         DateTime?                 @map("approved_at") @db.Timestamptz(6)
+  rejectedBy         String?                   @map("rejected_by") @db.Uuid
+  rejectedAt         DateTime?                 @map("rejected_at") @db.Timestamptz(6)
+  rejectionReason    String?                   @map("rejection_reason")
+  version            Int                       @default(0)
+  createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy          String                    @map("created_by") @db.Uuid
+  updatedBy          String                    @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([fundingAgreementId, requestNumber])
+  @@index([tenantId, projectId, fundingAgreementId, status])
+  @@index([tenantId, projectId, measurementId])
+  @@map("disbursement_requests")
+}
+
+model Disbursement {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  tenantId              String                 @map("tenant_id") @db.Uuid
+  projectId             String                 @map("project_id") @db.Uuid
+  fundingAgreementId    String                 @map("funding_agreement_id") @db.Uuid
+  disbursementRequestId String                 @map("disbursement_request_id") @db.Uuid
+  amount                Decimal                @db.Decimal(18, 2)
+  disbursementDate      DateTime               @map("disbursement_date") @db.Date
+  reference             String?
+  notes                 String?
+  status                FinancialPostingStatus @default(POSTED)
+  reversalReason        String?                @map("reversal_reason")
+  version               Int                    @default(0)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy             String                 @map("created_by") @db.Uuid
+  updatedBy             String                 @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, fundingAgreementId, status])
+  @@index([tenantId, projectId, disbursementRequestId])
+  @@map("disbursements")
+}
+
+model Payment {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  tenantId           String                 @map("tenant_id") @db.Uuid
+  projectId          String                 @map("project_id") @db.Uuid
+  supplierId         String                 @map("supplier_id") @db.Uuid
+  contractId         String?                @map("contract_id") @db.Uuid
+  measurementId      String?                @map("measurement_id") @db.Uuid
+  expenseId          String?                @map("expense_id") @db.Uuid
+  retentionReleaseId String?                @map("retention_release_id") @db.Uuid
+  paymentNumber      Int                    @map("payment_number")
+  amount             Decimal                @db.Decimal(18, 2)
+  paymentDate        DateTime               @map("payment_date") @db.Date
+  method             PaymentMethod
+  reference          String?
+  description        String?
+  status             FinancialPostingStatus @default(POSTED)
+  version            Int                    @default(0)
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy          String                 @map("created_by") @db.Uuid
+  updatedBy          String                 @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, paymentNumber])
+  @@index([tenantId, projectId, paymentDate])
+  @@index([tenantId, projectId, measurementId, status])
+  @@index([tenantId, projectId, expenseId, status])
+  @@index([tenantId, projectId, retentionReleaseId, status])
+  @@map("payments")
+}
+
+model PaymentReversal {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  paymentId String   @map("payment_id") @db.Uuid
+  reason    String
+  version   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy String   @map("created_by") @db.Uuid
+  updatedBy String   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([paymentId])
+  @@map("payment_reversals")
+}
+
+model FinancialOperation {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  key         String   @db.VarChar(128)
+  requestHash String   @map("request_hash") @db.VarChar(64)
+  result      Json
+  version     Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy   String   @map("created_by") @db.Uuid
+  updatedBy   String   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, createdBy, key])
+  @@map("financial_operations")
+}
+
+model FinancialBaseline {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  amount    Decimal  @db.Decimal(18, 2)
+  source    String
+  version   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy String   @map("created_by") @db.Uuid
+  updatedBy String   @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId])
+  @@map("financial_baselines")
+}
+
+model MeasurementDocument {
+  id            String                @id @default(uuid()) @db.Uuid
+  tenantId      String                @map("tenant_id") @db.Uuid
+  projectId     String                @map("project_id") @db.Uuid
+  measurementId String                @map("measurement_id") @db.Uuid
+  documentId    String                @map("document_id") @db.Uuid
+  documentType  FinancialDocumentType @map("document_type")
+  version       Int                   @default(0)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy     String                @map("created_by") @db.Uuid
+  updatedBy     String                @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([documentId])
+  @@index([tenantId, projectId, measurementId])
+  @@map("measurement_documents")
+}
+
+model FundingDocument {
+  id                 String                @id @default(uuid()) @db.Uuid
+  tenantId           String                @map("tenant_id") @db.Uuid
+  projectId          String                @map("project_id") @db.Uuid
+  fundingAgreementId String                @map("funding_agreement_id") @db.Uuid
+  documentId         String                @map("document_id") @db.Uuid
+  documentType       FinancialDocumentType @map("document_type")
+  version            Int                   @default(0)
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy          String                @map("created_by") @db.Uuid
+  updatedBy          String                @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([documentId])
+  @@index([tenantId, projectId, fundingAgreementId])
+  @@map("funding_documents")
+}
+
+model PaymentDocument {
+  id           String                @id @default(uuid()) @db.Uuid
+  tenantId     String                @map("tenant_id") @db.Uuid
+  projectId    String                @map("project_id") @db.Uuid
+  paymentId    String                @map("payment_id") @db.Uuid
+  documentId   String                @map("document_id") @db.Uuid
+  documentType FinancialDocumentType @map("document_type")
+  version      Int                   @default(0)
+  createdAt    DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdBy    String                @map("created_by") @db.Uuid
+  updatedBy    String                @map("updated_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([documentId])
+  @@index([tenantId, projectId, paymentId])
+  @@map("payment_documents")
 }

@@ -419,6 +419,7 @@ export class CommercialService {
     this.admin(r);
     const s = await this.scope(r, p, "write");
     return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM projects WHERE tenant_id=${s.tenantId}::uuid AND id=${p}::uuid FOR UPDATE`;
       const c = await this.contract(tx, s, id, true);
       d.assertVersion(c.version, version);
       const status = d.contractTransition(c.status, action) as typeof c.status;
@@ -440,6 +441,33 @@ export class CommercialService {
         where: { ...s, id },
         data: { status, version: { increment: 1 }, updatedBy: r.auth.userId },
       });
+      if (
+        action === "activate" &&
+        c.advanceAmount.gt(0) &&
+        !(await tx.advanceTransaction.findFirst({
+          where: { ...s, contractId: id, type: "ADVANCE_GRANTED" },
+        }))
+      ) {
+        const grant = await tx.advanceTransaction.create({
+          data: {
+            ...s,
+            ...stamp(r),
+            contractId: id,
+            type: "ADVANCE_GRANTED",
+            amount: c.advanceAmount,
+          },
+        });
+        await this.audit(
+          tx,
+          r,
+          "ADVANCE_GRANTED",
+          "AdvanceTransaction",
+          grant.id,
+          p,
+          null,
+          grant,
+        );
+      }
       const event: Record<string, string> = {
         activate: "ACTIVATED",
         suspend: "SUSPENDED",
@@ -682,6 +710,7 @@ export class CommercialService {
     if (action !== "submit") this.admin(r);
     const s = await this.scope(r, p, "write");
     return this.db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM projects WHERE tenant_id=${s.tenantId}::uuid AND id=${p}::uuid FOR UPDATE`;
       const c = await this.contract(tx, s, id, true);
       if (!["ACTIVE", "SUSPENDED"].includes(c.status))
         fail(
@@ -730,14 +759,33 @@ export class CommercialService {
         const value = (type: string) =>
           sums.find((x) => x.amendmentType === type)?._sum.amount?.toString() ??
           "0";
+        const currentValue = d.currentContractValue(
+          c.originalValue.toString(),
+          value("ADDITION"),
+          value("OMISSION"),
+        );
+        const measured = await tx.measurement.aggregate({
+          where: {
+            ...s,
+            contractId: id,
+            status: { in: ["APPROVED", "CERTIFIED", "PARTIALLY_PAID", "PAID"] },
+          },
+          _sum: { grossAmount: true },
+        });
+        if (
+          new Decimal(currentValue).lt(
+            measured._sum.grossAmount?.toString() ?? 0,
+          )
+        )
+          fail(
+            409,
+            "MEASUREMENT_VALUE_EXCEEDS_CONTRACT",
+            "Supressão inferior ao valor já medido",
+          );
         await tx.contract.update({
           where: { ...s, id },
           data: {
-            currentValue: d.currentContractValue(
-              c.originalValue.toString(),
-              value("ADDITION"),
-              value("OMISSION"),
-            ),
+            currentValue,
             version: { increment: 1 },
             updatedBy: r.auth.userId,
           },
@@ -1017,6 +1065,17 @@ export class CommercialService {
         );
       if (["reject", "reverse"].includes(action) && !input.reason)
         fail(400, "VALIDATION_ERROR", "Motivo obrigatório");
+      if (
+        action === "reverse" &&
+        (await tx.payment.count({
+          where: { ...s, expenseId: id, status: "POSTED" },
+        }))
+      )
+        fail(
+          409,
+          "INVALID_PAYMENT_SOURCE",
+          "Estorne os pagamentos antes da despesa",
+        );
       if (action === "reverse")
         await tx.expenseReversal.create({
           data: { ...s, expenseId: id, reason: input.reason!, ...stamp(r) },

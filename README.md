@@ -202,3 +202,14 @@ O template está em `GET /api/v1/projects/:projectId/budget/import/template`. Fl
 Fornecedores/subempreiteiros, contratos e itens ligados ao orçamento, adendas/supressões, retenção e adiantamentos, centros de custo, despesas com comprovativos e estorno, dashboard sem dupla contagem. Ver [fornecedores](docs/suppliers.md), [contratos](docs/contracts.md), [despesas](docs/expenses.md) e [regras de custos](docs/cost-management.md).
 
 As aprovações exigem outro ADMIN por defeito (`PREVENT_SELF_APPROVAL=true`). O demo inclui `diretor@example.com` para aprovação independente. O seed mantém os dados existentes e não funciona em produção.
+
+
+## M5 — Medições, certificação, financiamento e pagamentos
+
+Medições acumuladas com revisão fiscal, aprovação independente e certificação; retenções e adiantamentos por ledger; libertações; vários acordos de financiamento; pedidos e desembolsos; pagamentos parciais/totais e estornos; comprovativos privados; dashboard e curva S física/financeira. Todas as operações financeiras mantêm isolamento de empresa/obra, auditoria, versões e idempotência nos lançamentos críticos.
+
+Consulte [medições](docs/measurements.md), [retenções](docs/retention.md), [adiantamentos](docs/advance-recovery.md), [financiamento](docs/funding.md), [pagamentos](docs/payments.md) e [fluxo completo com teste manual](docs/financial-workflow.md).
+
+Atualização local: `docker compose up --build -d --wait`. API aplica migrations e seed automaticamente. O demo MED-001 tem líquido 850.000 MZN, pago 500.000; o financiamento aprovado é 15.000.000 com 2.000.000 desembolsados. O seed preserva dados existentes. A aprovação M5 nunca permite o próprio autor, mesmo que a configuração de exceção M4 esteja desativada.
+
+Resultados e evidências da M5: [validação completa](docs/validation-m5.md).

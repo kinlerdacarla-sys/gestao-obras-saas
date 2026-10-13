@@ -45,13 +45,17 @@ import { versionInput } from "../../../../packages/validation/src/schedule.js";
 import { uuid } from "../../../../packages/validation/src/index.js";
 import { configuration } from "../../../../packages/config/src/index.js";
 import { maySeeFile } from "../../../../packages/domain/src/daily-log.js";
-type Owner = "dailyLog" | "expense" | "contract";
-function ownerWhere(owner: Owner, id: string) {
-  return owner === "dailyLog"
-    ? { dailyLogId: id }
-    : owner === "expense"
-      ? { expenseId: id }
-      : { contractId: id };
+type Owner =
+  | "dailyLog"
+  | "expense"
+  | "contract"
+  | "measurement"
+  | "fundingAgreement"
+  | "payment";
+const financialOwner = (owner: Owner) =>
+  ["measurement", "fundingAgreement", "payment"].includes(owner);
+export function ownerWhere(owner: Owner, id: string) {
+  return { [`${owner}Id`]: id };
 }
 function signature(id: string, userId: string, expiry: number) {
   return createHmac("sha256", configuration().JWT_SECRET)
@@ -84,7 +88,23 @@ export class DocumentService {
     owner: Owner,
     write = false,
   ) {
-    const result = await this.access.check(req, projectId, write);
+    const result = await this.access.check(
+      req,
+      projectId,
+      write && !financialOwner(owner),
+    );
+    if (financialOwner(owner)) {
+      const allowed = write
+        ? owner === "measurement"
+          ? ["ADMIN", "MANAGER"]
+          : ["ADMIN"]
+        : owner === "measurement"
+          ? ["ADMIN", "MANAGER", "INSPECTOR", "FINANCIER", "CLIENT"]
+          : ["ADMIN", "MANAGER", "FINANCIER", "CLIENT"];
+      if (!allowed.includes(result.role))
+        fail(403, "ACCESS_DENIED", "Sem acesso aos comprovativos financeiros");
+      return result;
+    }
     if (
       owner !== "dailyLog" &&
       (result.role === "CLIENT" ||
@@ -102,6 +122,32 @@ export class DocumentService {
     userId: string,
   ) {
     if (owner === "dailyLog") return claimLog(tx, scope, id, version);
+    if (financialOwner(owner)) {
+      const row = await this.financialRecord(tx, scope, id, owner);
+      if (!row)
+        fail(404, "RESOURCE_NOT_FOUND", "Registo financeiro não encontrado");
+      assertVersion(row.version, version);
+      if (
+        !(
+          owner === "payment"
+            ? ["POSTED"]
+            : owner === "fundingAgreement"
+              ? ["DRAFT", "ACTIVE"]
+              : ["DRAFT"]
+        ).includes(row.status)
+      )
+        fail(409, "FINANCIAL_RECORD_IMMUTABLE", "Registo não editável");
+      const where = { ...scope, id, version },
+        data = { version: { increment: 1 }, updatedBy: userId };
+      const changed =
+        owner === "measurement"
+          ? await tx.measurement.updateMany({ where, data })
+          : owner === "fundingAgreement"
+            ? await tx.fundingAgreement.updateMany({ where, data })
+            : await tx.payment.updateMany({ where, data });
+      if (changed.count !== 1) assertVersion(-1, 0);
+      return { version: row.version, logDate: new Date() };
+    }
     const row =
       owner === "expense"
         ? await tx.expense.findFirst({ where: { ...scope, id } })
@@ -123,6 +169,18 @@ export class DocumentService {
     if (changed.count !== 1) assertVersion(-1, 0);
     return { version: row.version, logDate: new Date() };
   }
+  financialRecord(
+    tx: Prisma.TransactionClient,
+    scope: { tenantId: string; projectId: string },
+    id: string,
+    owner: Owner,
+  ) {
+    return owner === "measurement"
+      ? tx.measurement.findFirst({ where: { ...scope, id } })
+      : owner === "fundingAgreement"
+        ? tx.fundingAgreement.findFirst({ where: { ...scope, id } })
+        : tx.payment.findFirst({ where: { ...scope, id } });
+  }
   private file(key: string) {
     const base = path.resolve(
         process.env.DOCUMENT_STORAGE_PATH ?? "work/document-storage",
@@ -143,6 +201,10 @@ export class DocumentService {
       | "RECEIPT"
       | "DELIVERY_NOTE"
       | "PURCHASE_ORDER"
+      | "MEASUREMENT_SHEET"
+      | "CERTIFICATE"
+      | "PAYMENT_PROOF"
+      | "DISBURSEMENT_PROOF"
       | "OTHER" = "OTHER",
   ) {
     const { scope } = await this.authorize(req, projectId, owner, true);
@@ -207,7 +269,12 @@ export class DocumentService {
             ...scope,
             expenseId: logId,
             documentId: id,
-            documentType,
+            documentType: documentType as
+              | "INVOICE"
+              | "RECEIPT"
+              | "DELIVERY_NOTE"
+              | "PURCHASE_ORDER"
+              | "OTHER",
             createdBy: req.auth.userId,
             updatedBy: req.auth.userId,
           },
@@ -222,7 +289,33 @@ export class DocumentService {
             updatedBy: req.auth.userId,
           },
         });
-      else if (input.isPhoto)
+      else if (financialOwner(owner)) {
+        const common = {
+          ...scope,
+          documentId: id,
+          documentType: documentType as
+            | "MEASUREMENT_SHEET"
+            | "CERTIFICATE"
+            | "INVOICE"
+            | "PAYMENT_PROOF"
+            | "DISBURSEMENT_PROOF"
+            | "OTHER",
+          createdBy: req.auth.userId,
+          updatedBy: req.auth.userId,
+        };
+        if (owner === "measurement")
+          await tx.measurementDocument.create({
+            data: { ...common, measurementId: logId },
+          });
+        else if (owner === "fundingAgreement")
+          await tx.fundingDocument.create({
+            data: { ...common, fundingAgreementId: logId },
+          });
+        else
+          await tx.paymentDocument.create({
+            data: { ...common, paymentId: logId },
+          });
+      } else if (input.isPhoto)
         await tx.dailyLogPhoto.create({
           data: {
             ...scope,
@@ -247,7 +340,7 @@ export class DocumentService {
       const expiry = expiresAt.getTime();
       return {
         id: document.id,
-        uploadUrl: `/api/v1/projects/${projectId}/${owner === "dailyLog" ? "daily-logs" : owner === "expense" ? "expenses" : "contracts"}/${logId}/documents/${id}/upload?expires=${expiry}&signature=${signature(id, req.auth.userId, expiry)}`,
+        uploadUrl: `/api/v1/projects/${projectId}/${owner === "dailyLog" ? "daily-logs" : owner === "expense" ? "expenses" : owner === "measurement" ? "measurements" : owner === "fundingAgreement" ? "funding-agreements" : owner === "payment" ? "payments" : "contracts"}/${logId}/documents/${id}/upload?expires=${expiry}&signature=${signature(id, req.auth.userId, expiry)}`,
         method: "PUT",
         expiresAt,
         version: log.version + 1,
@@ -301,8 +394,9 @@ export class DocumentService {
         "VALIDATION_ERROR",
         "Tamanho, checksum ou conteúdo do ficheiro inválido",
       );
-    const log =
-      owner === "dailyLog"
+    const log = financialOwner(owner)
+      ? await this.financialRecord(this.db, scope, logId, owner)
+      : owner === "dailyLog"
         ? await this.db.dailyLog.findFirst({ where: { ...scope, id: logId } })
         : owner === "expense"
           ? await this.db.expense.findFirst({ where: { ...scope, id: logId } })
@@ -311,9 +405,15 @@ export class DocumentService {
             });
     if (
       !log ||
-      !(owner === "dailyLog" ? ["DRAFT", "REOPENED"] : ["DRAFT"]).includes(
-        log.status,
-      )
+      !(
+        owner === "dailyLog"
+          ? ["DRAFT", "REOPENED"]
+          : owner === "payment"
+            ? ["POSTED"]
+            : owner === "fundingAgreement"
+              ? ["DRAFT", "ACTIVE"]
+              : ["DRAFT"]
+      ).includes(log.status)
     )
       fail(
         409,
@@ -384,8 +484,9 @@ export class DocumentService {
         tx,
         req.auth,
         {
-          action:
-            owner === "expense"
+          action: financialOwner(owner)
+            ? `${owner.toUpperCase()}_DOCUMENT_ATTACHED`
+            : owner === "expense"
               ? "EXPENSE_DOCUMENT_ATTACHED"
               : owner === "contract"
                 ? "CONTRACT_DOCUMENT_ATTACHED"

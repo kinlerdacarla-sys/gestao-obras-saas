@@ -1,3 +1,4 @@
+import { seedFinancial } from "./seed-financial.js";
 import { seedCommercial } from "./seed-commercial.js";
 import { seedExecution } from "./seed-execution.js";
 import { seedBudget } from "./seed-budget.js";
@@ -107,6 +108,15 @@ try {
     project.id,
     admin.id,
     users.find((x) => x.role === "MANAGER")!.user.id,
+  );
+  await seedFinancial(
+    db,
+    tenant.id,
+    project.id,
+    admin.id,
+    users.find((x) => x.role === "MANAGER")!.user.id,
+    users.find((x) => x.role === "INSPECTOR")!.user.id,
+    users.find((x) => x.role === "FINANCIER")!.user.id,
   );
   console.info("Seed concluído: construtora-demo / admin@example.com");
 } finally {

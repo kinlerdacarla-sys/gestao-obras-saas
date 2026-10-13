@@ -1,0 +1,5 @@
+{
+  "api": "up",
+  "postgresql": "up",
+  "redis": "up"
+}

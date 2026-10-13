@@ -140,6 +140,19 @@ export function ProjectDetail({ id }: { id: string }) {
       <ProjectOverview project={project} />
       <BudgetDashboard id={id} />
       <OperationalDashboard id={id} />
+      <section className="card">
+        <h2>Medições e financiamento</h2>
+        <nav className="budget-nav">
+          <Link href={`/projects/${id}/measurements`}>Medições</Link>
+          {me.role !== "INSPECTOR" && (
+            <>
+              <Link href={`/projects/${id}/financial`}>Financeiro</Link>
+              <Link href={`/projects/${id}/funding`}>Financiamento</Link>
+              <Link href={`/projects/${id}/payments`}>Pagamentos</Link>
+            </>
+          )}
+        </nav>
+      </section>
       {me.role !== "CLIENT" && (
         <section className="card">
           <h2>Gestão comercial</h2>
