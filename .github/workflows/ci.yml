@@ -21,6 +21,7 @@ jobs:
         options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 15
     env:
       NODE_ENV: test
+      MAIL_TRANSPORT: stream
       DATABASE_URL: postgresql://obras:ci-only@localhost:5432/obras_test
       REDIS_URL: redis://localhost:6379
       WEB_ORIGIN: http://localhost:3000

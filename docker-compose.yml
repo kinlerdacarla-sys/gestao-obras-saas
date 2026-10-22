@@ -122,6 +122,7 @@ services:
     environment:
       CI: "true"
       NODE_ENV: test
+      MAIL_TRANSPORT: stream
       DATABASE_URL: postgresql://obras:validation-only@postgres-test:5432/obras_test
       REDIS_URL: redis://redis-test:6379
       WEB_ORIGIN: http://localhost:3000
