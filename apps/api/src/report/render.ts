@@ -117,7 +117,7 @@ export async function renderReport(
   }
   const document = new PDFDocument({
       size: "A4",
-      margin: 48,
+      margins: { top: 48, bottom: 84, left: 48, right: 48 },
       bufferPages: true,
       info: { Title: title, Author: "Obras" },
     }),
@@ -254,6 +254,12 @@ export async function renderReport(
       continue;
     }
     for (const row of section.rows) {
+      const record = Object.entries(row)
+        .map(([key, val]) => `${label(key)}: ${text(val)}`)
+        .join("\n");
+      const height = document.heightOfString(record, { width: 495 }) + 12;
+      if (height < 690 && document.y + height > document.page.height - 84)
+        document.addPage();
       for (const [key, val] of Object.entries(row)) {
         document.text(`${label(key)}: ${text(val)}`, { width: 495 });
       }
@@ -273,12 +279,15 @@ export async function renderReport(
   const range = document.bufferedPageRange();
   for (let page = 0; page < range.count; page++) {
     document.switchToPage(page);
+    const bottomMargin = document.page.margins.bottom;
+    document.page.margins.bottom = 0;
     document
       .fontSize(8)
       .fillColor("#5d7377")
       .text(`Obras · ${page + 1} / ${range.count}`, 48, 780, {
         lineBreak: false,
       });
+    document.page.margins.bottom = bottomMargin;
   }
   document.end();
   return complete;
