@@ -1,3 +1,4 @@
+import { monitorQualityDeadlines } from "./quality.js";
 import "dotenv/config";
 import { Worker, Queue } from "bullmq";
 import { snapshotProgress } from "./progress.js";
@@ -7,6 +8,32 @@ import { redisConnection } from "../../../packages/config/src/redis.js";
 import { Database } from "../../api/src/platform.js";
 import { processBudgetImport } from "../../api/src/budget/import-stage.js";
 const db = new Database();
+const qualityQueue = new Queue("quality-deadline-monitor", {
+  connection: redisConnection(),
+});
+const qualityWorker = new Worker(
+  "quality-deadline-monitor",
+  async () => monitorQualityDeadlines(db),
+  { connection: redisConnection(), concurrency: 1 },
+);
+qualityWorker.on("error", (e) => console.error("Quality deadlines", e.message));
+qualityWorker.on("failed", (_job, e) =>
+  console.error("Quality deadline failed", e.message),
+);
+await qualityQueue.upsertJobScheduler(
+  "quality-deadlines",
+  { pattern: "0 7 * * *", tz: "Africa/Maputo" },
+  {
+    name: "quality-deadline-monitor",
+    data: {},
+    opts: {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
+      removeOnComplete: 100,
+      removeOnFail: 100,
+    },
+  },
+);
 const progressQueue = new Queue("project-progress-snapshot", {
   connection: redisConnection(),
 });
@@ -75,6 +102,8 @@ worker.on("failed", (job, error) =>
 worker.on("error", (error) => console.error(error.message));
 for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, async () => {
+    await qualityWorker.close();
+    await qualityQueue.close();
     await worker.close();
     await budgetWorker.close();
     await progressWorker.close();

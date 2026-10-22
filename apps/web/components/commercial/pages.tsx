@@ -1,4 +1,5 @@
 "use client";
+import { QualityIndicator } from "../quality/common";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Decimal } from "decimal.js";
@@ -857,6 +858,7 @@ export function ContractDetail({
         {row.contractNumber} · {row.title}
       </h1>
       <Nav id={id} />
+      <QualityIndicator projectId={id} kind="contracts" id={contractId} />
       <Link href={`/projects/${id}/contracts/${contractId}/financial`}>
         Retenções e adiantamentos
       </Link>

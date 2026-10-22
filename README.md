@@ -213,3 +213,19 @@ Consulte [medições](docs/measurements.md), [retenções](docs/retention.md), [
 Atualização local: `docker compose up --build -d --wait`. API aplica migrations e seed automaticamente. O demo MED-001 tem líquido 850.000 MZN, pago 500.000; o financiamento aprovado é 15.000.000 com 2.000.000 desembolsados. O seed preserva dados existentes. A aprovação M5 nunca permite o próprio autor, mesmo que a configuração de exceção M4 esteja desativada.
 
 Resultados e evidências da M5: [validação completa](docs/validation-m5.md).
+
+## M6 — Fiscalização, qualidade e não conformidades
+
+Na obra, abra **Fiscalização e qualidade**. A M6 acrescenta pedidos de inspeção, templates/versionamento de checklist, inspeções com evidências, hold points, NCR, ações corretivas, verificação independente, indicadores, relatórios e notificações de prazo. Integra cronograma, orçamento, diário, contratos e medições sem alterar automaticamente valores ou progresso.
+
+- [Inspeções e evidências](docs/inspections.md)
+- [Checklists e versões](docs/checklists.md)
+- [Não conformidades](docs/non-conformities.md)
+- [Ações corretivas](docs/corrective-actions.md)
+- [Fluxo manual, segurança, indicadores e bloqueio de certificação](docs/quality-workflow.md)
+
+O seed inclui CHK-FUND, CHK-STRUCT e CHK-MASON; IR-001, uma inspeção com sete respostas PASS e uma FAIL, NCR-001 aberta e uma NCR encerrada. Templates são exemplos configuráveis. Fotografias demo são ilustrativas. O worker reutilizado agenda `quality-deadline-monitor` às 07:00 Africa/Maputo e grava avisos deduplicados na caixa de entrada da aplicação.
+
+A política de bloquear certificação com NCR crítica não encerrada está ativa por omissão. O bloqueio aplica-se no instante da certificação; não bloqueia retroativamente o pagamento de medições já certificadas. Consulte a regra exata na documentação do fluxo.
+
+Resultados e evidências da M6: [validação completa](docs/validation-m6.md).

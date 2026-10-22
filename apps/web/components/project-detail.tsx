@@ -97,6 +97,9 @@ export function ProjectDetail({ id }: { id: string }) {
         {canEdit && <button onClick={() => setEdit(true)}>Editar obra</button>}
       </div>
       <div className="tabs">
+        <Link className="button" href={`/projects/${id}/quality`}>
+          Fiscalização e qualidade
+        </Link>
         <Link className="button" href={`/projects/${id}/schedule`}>
           Cronograma
         </Link>
@@ -106,21 +109,17 @@ export function ProjectDetail({ id }: { id: string }) {
         <Link className="button" href={`/projects/${id}/budget`}>
           Orçamento
         </Link>
-        {[
-          "Visão Geral",
-          "Medições",
-          "Fiscalização",
-          "Financeiro",
-          "Documentos",
-        ].map((tab, i) => (
-          <button
-            key={tab}
-            disabled={i !== 0}
-            title={i ? "Disponível numa próxima milestone" : undefined}
-          >
-            {tab}
-          </button>
-        ))}
+        {["Visão Geral", "Medições", "Financeiro", "Documentos"].map(
+          (tab, i) => (
+            <button
+              key={tab}
+              disabled={i !== 0}
+              title={i ? "Disponível numa próxima milestone" : undefined}
+            >
+              {tab}
+            </button>
+          ),
+        )}
       </div>
       {error && <Notice error>{error}</Notice>}
       {success && <Notice>{success}</Notice>}

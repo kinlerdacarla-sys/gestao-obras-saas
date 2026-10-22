@@ -51,7 +51,11 @@ type Owner =
   | "contract"
   | "measurement"
   | "fundingAgreement"
-  | "payment";
+  | "payment"
+  | "inspection"
+  | "correctiveAction";
+const qualityOwner = (owner: Owner) =>
+  ["inspection", "correctiveAction"].includes(owner);
 const financialOwner = (owner: Owner) =>
   ["measurement", "fundingAgreement", "payment"].includes(owner);
 export function ownerWhere(owner: Owner, id: string) {
@@ -91,8 +95,18 @@ export class DocumentService {
     const result = await this.access.check(
       req,
       projectId,
-      write && !financialOwner(owner),
+      write && !financialOwner(owner) && !qualityOwner(owner),
     );
+    if (qualityOwner(owner)) {
+      if (
+        write &&
+        !(
+          owner === "inspection" ? ["ADMIN", "INSPECTOR"] : ["ADMIN", "MANAGER"]
+        ).includes(result.role)
+      )
+        fail(403, "ACCESS_DENIED", "Sem permissão para evidência de qualidade");
+      return result;
+    }
     if (financialOwner(owner)) {
       const allowed = write
         ? owner === "measurement"
@@ -121,6 +135,45 @@ export class DocumentService {
     owner: Owner,
     userId: string,
   ) {
+    if (qualityOwner(owner)) {
+      await tx.$queryRaw`SELECT id FROM projects WHERE tenant_id=${scope.tenantId}::uuid AND id=${scope.projectId}::uuid FOR UPDATE`;
+      const row = await this.qualityRecord(tx, scope, id, owner);
+      if (!row) fail(404, "RESOURCE_NOT_FOUND", "Origem não encontrada");
+      assertVersion(row.version, version);
+      if (
+        !(
+          owner === "inspection"
+            ? ["DRAFT", "IN_PROGRESS"]
+            : ["OPEN", "IN_PROGRESS", "REJECTED"]
+        ).includes(row.status)
+      )
+        fail(
+          409,
+          owner === "inspection"
+            ? "INSPECTION_IMMUTABLE"
+            : "NON_CONFORMITY_IMMUTABLE",
+          "Origem não editável",
+        );
+      if (owner === "correctiveAction") {
+        const a = await tx.correctiveAction.findFirstOrThrow({
+          where: { ...scope, id },
+        });
+        const n = await tx.nonConformity.findFirstOrThrow({
+          where: { ...scope, id: a.nonConformityId },
+        });
+        if (n.status !== "CORRECTION_IN_PROGRESS")
+          fail(409, "NON_CONFORMITY_IMMUTABLE", "NCR não está em correção");
+        await tx.correctiveAction.update({
+          where: { id },
+          data: { version: { increment: 1 } },
+        });
+      } else
+        await tx.inspection.update({
+          where: { id },
+          data: { version: { increment: 1 } },
+        });
+      return { version: row.version, logDate: new Date() };
+    }
     if (owner === "dailyLog") return claimLog(tx, scope, id, version);
     if (financialOwner(owner)) {
       const row = await this.financialRecord(tx, scope, id, owner);
@@ -169,6 +222,16 @@ export class DocumentService {
     if (changed.count !== 1) assertVersion(-1, 0);
     return { version: row.version, logDate: new Date() };
   }
+  qualityRecord(
+    tx: Prisma.TransactionClient,
+    scope: { tenantId: string; projectId: string },
+    id: string,
+    owner: Owner,
+  ) {
+    return owner === "inspection"
+      ? tx.inspection.findFirst({ where: { ...scope, id } })
+      : tx.correctiveAction.findFirst({ where: { ...scope, id } });
+  }
   financialRecord(
     tx: Prisma.TransactionClient,
     scope: { tenantId: string; projectId: string },
@@ -194,7 +257,10 @@ export class DocumentService {
     req: ApiRequest,
     projectId: string,
     logId: string,
-    input: z.infer<typeof uploadInput>,
+    input: z.infer<typeof uploadInput> & {
+      inspectionItemId?: string | null;
+      evidenceType?: "PHOTO" | "DOCUMENT" | "DRAWING" | "TEST_RESULT" | "OTHER";
+    },
     owner: Owner = "dailyLog",
     documentType:
       | "INVOICE"
@@ -263,7 +329,42 @@ export class DocumentService {
           createdBy: req.auth.userId,
         },
       });
-      if (owner === "expense")
+      if (qualityOwner(owner)) {
+        if (owner === "inspection") {
+          if (
+            input.inspectionItemId &&
+            !(await tx.inspectionItem.findFirst({
+              where: {
+                ...scope,
+                id: input.inspectionItemId,
+                inspectionId: logId,
+              },
+            }))
+          )
+            fail(404, "RESOURCE_NOT_FOUND", "Item não pertence à inspeção");
+          await tx.inspectionEvidence.create({
+            data: {
+              ...scope,
+              inspectionId: logId,
+              inspectionItemId: input.inspectionItemId,
+              documentId: id,
+              caption: input.caption,
+              evidenceType:
+                input.evidenceType ?? (input.isPhoto ? "PHOTO" : "DOCUMENT"),
+              createdBy: req.auth.userId,
+            },
+          });
+        } else
+          await tx.correctiveActionEvidence.create({
+            data: {
+              ...scope,
+              correctiveActionId: logId,
+              documentId: id,
+              caption: input.caption,
+              createdBy: req.auth.userId,
+            },
+          });
+      } else if (owner === "expense")
         await tx.expenseDocument.create({
           data: {
             ...scope,
@@ -340,7 +441,7 @@ export class DocumentService {
       const expiry = expiresAt.getTime();
       return {
         id: document.id,
-        uploadUrl: `/api/v1/projects/${projectId}/${owner === "dailyLog" ? "daily-logs" : owner === "expense" ? "expenses" : owner === "measurement" ? "measurements" : owner === "fundingAgreement" ? "funding-agreements" : owner === "payment" ? "payments" : "contracts"}/${logId}/documents/${id}/upload?expires=${expiry}&signature=${signature(id, req.auth.userId, expiry)}`,
+        uploadUrl: `/api/v1/projects/${projectId}/${owner === "inspection" ? "inspections" : owner === "correctiveAction" ? "corrective-actions" : owner === "dailyLog" ? "daily-logs" : owner === "expense" ? "expenses" : owner === "measurement" ? "measurements" : owner === "fundingAgreement" ? "funding-agreements" : owner === "payment" ? "payments" : "contracts"}/${logId}/documents/${id}/upload?expires=${expiry}&signature=${signature(id, req.auth.userId, expiry)}`,
         method: "PUT",
         expiresAt,
         version: log.version + 1,
@@ -394,25 +495,33 @@ export class DocumentService {
         "VALIDATION_ERROR",
         "Tamanho, checksum ou conteúdo do ficheiro inválido",
       );
-    const log = financialOwner(owner)
-      ? await this.financialRecord(this.db, scope, logId, owner)
-      : owner === "dailyLog"
-        ? await this.db.dailyLog.findFirst({ where: { ...scope, id: logId } })
-        : owner === "expense"
-          ? await this.db.expense.findFirst({ where: { ...scope, id: logId } })
-          : await this.db.contract.findFirst({
-              where: { ...scope, id: logId },
-            });
+    const log = qualityOwner(owner)
+      ? await this.qualityRecord(this.db, scope, logId, owner)
+      : financialOwner(owner)
+        ? await this.financialRecord(this.db, scope, logId, owner)
+        : owner === "dailyLog"
+          ? await this.db.dailyLog.findFirst({ where: { ...scope, id: logId } })
+          : owner === "expense"
+            ? await this.db.expense.findFirst({
+                where: { ...scope, id: logId },
+              })
+            : await this.db.contract.findFirst({
+                where: { ...scope, id: logId },
+              });
     if (
       !log ||
       !(
-        owner === "dailyLog"
-          ? ["DRAFT", "REOPENED"]
-          : owner === "payment"
-            ? ["POSTED"]
-            : owner === "fundingAgreement"
-              ? ["DRAFT", "ACTIVE"]
-              : ["DRAFT"]
+        owner === "inspection"
+          ? ["DRAFT", "IN_PROGRESS"]
+          : owner === "correctiveAction"
+            ? ["OPEN", "IN_PROGRESS", "REJECTED"]
+            : owner === "dailyLog"
+              ? ["DRAFT", "REOPENED"]
+              : owner === "payment"
+                ? ["POSTED"]
+                : owner === "fundingAgreement"
+                  ? ["DRAFT", "ACTIVE"]
+                  : ["DRAFT"]
       ).includes(log.status)
     )
       fail(
@@ -484,15 +593,17 @@ export class DocumentService {
         tx,
         req.auth,
         {
-          action: financialOwner(owner)
-            ? `${owner.toUpperCase()}_DOCUMENT_ATTACHED`
-            : owner === "expense"
-              ? "EXPENSE_DOCUMENT_ATTACHED"
-              : owner === "contract"
-                ? "CONTRACT_DOCUMENT_ATTACHED"
-                : document.isPhoto
-                  ? "PHOTO_UPLOADED"
-                  : "DOCUMENT_UPLOADED",
+          action: qualityOwner(owner)
+            ? "QUALITY_EVIDENCE_ADDED"
+            : financialOwner(owner)
+              ? `${owner.toUpperCase()}_DOCUMENT_ATTACHED`
+              : owner === "expense"
+                ? "EXPENSE_DOCUMENT_ATTACHED"
+                : owner === "contract"
+                  ? "CONTRACT_DOCUMENT_ATTACHED"
+                  : document.isPhoto
+                    ? "PHOTO_UPLOADED"
+                    : "DOCUMENT_UPLOADED",
           entityType: "Document",
           entityId: id,
           projectId,
@@ -535,6 +646,8 @@ export class DocumentService {
         (["CLIENT", "FINANCIER"].includes(role) && log?.status !== "APPROVED"))
     )
       fail(403, "ACCESS_DENIED", "Sem acesso ao ficheiro");
+    if (qualityOwner(owner) && !maySeeFile(role, document.visibility))
+      fail(403, "ACCESS_DENIED", "Sem acesso à evidência");
     return { document, bytes: await readFile(this.file(document.objectKey)) };
   }
   async remove(

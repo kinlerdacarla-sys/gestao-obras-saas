@@ -1,4 +1,16 @@
-import { Injectable, Module } from "@nestjs/common";
+import { Database } from "../platform.js";
+import type { ApiRequest } from "../auth/security.js";
+import { uuid } from "../../../../packages/validation/src/index.js";
+import {
+  Injectable,
+  Module,
+  Controller,
+  Get,
+  Post,
+  Param,
+  Req,
+  Inject,
+} from "@nestjs/common";
 import { configuration } from "../../../../packages/config/src/index.js";
 import { fail } from "../platform.js";
 @Injectable()
@@ -19,5 +31,54 @@ export class NotificationService {
     );
   }
 }
-@Module({ providers: [NotificationService], exports: [NotificationService] })
+@Controller("api/v1/notifications")
+class NotificationController {
+  constructor(@Inject(Database) readonly db: Database) {}
+  async scope(r: ApiRequest) {
+    const projects =
+      r.auth.role === "ADMIN"
+        ? undefined
+        : (
+            await this.db.projectUser.findMany({
+              where: {
+                tenantId: r.auth.tenantId,
+                userId: r.auth.userId,
+                status: "ACTIVE",
+              },
+              select: { projectId: true },
+            })
+          ).map((x) => x.projectId);
+    return {
+      tenantId: r.auth.tenantId,
+      userId: r.auth.userId,
+      ...(projects ? { projectId: { in: projects } } : {}),
+    };
+  }
+  @Get() async list(@Req() r: ApiRequest) {
+    return {
+      items: await this.db.notification.findMany({
+        where: await this.scope(r),
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      }),
+    };
+  }
+  @Post(":id/read") async read(@Req() r: ApiRequest, @Param("id") id: string) {
+    const row = await this.db.notification.updateMany({
+      where: {
+        ...(await this.scope(r)),
+        id: uuid.parse(id),
+      },
+      data: { readAt: new Date() },
+    });
+    if (!row.count)
+      fail(404, "RESOURCE_NOT_FOUND", "Notificação não encontrada");
+    return { ok: true };
+  }
+}
+@Module({
+  providers: [NotificationService],
+  controllers: [NotificationController],
+  exports: [NotificationService],
+})
 export class NotificationModule {}

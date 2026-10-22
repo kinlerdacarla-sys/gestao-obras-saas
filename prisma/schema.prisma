@@ -815,6 +815,8 @@ model DailyLogObservation {
 }
 
 model Document {
+  inspectionId       String? @map("inspection_id") @db.Uuid
+  correctiveActionId String? @map("corrective_action_id") @db.Uuid
   measurementId      String? @map("measurement_id") @db.Uuid
   fundingAgreementId String? @map("funding_agreement_id") @db.Uuid
   paymentId          String? @map("payment_id") @db.Uuid
@@ -1705,4 +1707,446 @@ model PaymentDocument {
   @@unique([documentId])
   @@index([tenantId, projectId, paymentId])
   @@map("payment_documents")
+}
+
+enum ChecklistStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ChecklistVersionStatus {
+  DRAFT
+  PUBLISHED
+  SUPERSEDED
+}
+
+enum ChecklistResponseType {
+  PASS_FAIL_NA
+  YES_NO_NA
+  TEXT
+  NUMBER
+  DATE
+}
+
+enum InspectionRequestStatus {
+  DRAFT
+  SUBMITTED
+  SCHEDULED
+  INSPECTION_IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum InspectionStatus {
+  DRAFT
+  IN_PROGRESS
+  SUBMITTED
+  CLOSED
+  CANCELLED
+}
+
+enum InspectionResult {
+  PASS
+  PASS_WITH_OBSERVATIONS
+  FAIL
+}
+
+enum ChecklistResult {
+  PASS
+  FAIL
+  NA
+}
+
+enum QualitySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum QualityCategory {
+  WORKMANSHIP
+  MATERIAL
+  DESIGN
+  DIMENSION
+  SAFETY
+  DOCUMENTATION
+  EQUIPMENT
+  PROCESS
+  OTHER
+}
+
+enum NcrStatus {
+  OPEN
+  ASSIGNED
+  CORRECTION_IN_PROGRESS
+  READY_FOR_VERIFICATION
+  CLOSED
+  REOPENED
+  CANCELLED
+}
+
+enum CorrectiveActionStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+  REJECTED
+  CANCELLED
+}
+
+enum QualityEvidenceType {
+  PHOTO
+  DOCUMENT
+  DRAWING
+  TEST_RESULT
+  OTHER
+}
+
+enum NcrEventType {
+  CREATED
+  ASSIGNED
+  STATUS_CHANGED
+  COMMENTED
+  CORRECTIVE_ACTION_CREATED
+  CORRECTIVE_ACTION_COMPLETED
+  VERIFICATION_APPROVED
+  VERIFICATION_REJECTED
+  CLOSED
+  REOPENED
+}
+
+model ChecklistTemplate {
+  id             String          @id @default(uuid()) @db.Uuid
+  tenantId       String          @map("tenant_id") @db.Uuid
+  createdBy      String          @map("created_by") @db.Uuid
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  name           String
+  code           String
+  description    String?
+  category       String?
+  status         ChecklistStatus @default(DRAFT)
+  currentVersion Int             @default(0) @map("current_version")
+  version        Int             @default(0)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, code])
+  @@map("checklist_templates")
+}
+
+model ChecklistTemplateVersion {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  tenantId            String                 @map("tenant_id") @db.Uuid
+  createdBy           String                 @map("created_by") @db.Uuid
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  checklistTemplateId String                 @map("checklist_template_id") @db.Uuid
+  versionNumber       Int                    @map("version_number")
+  status              ChecklistVersionStatus @default(DRAFT)
+  publishedBy         String?                @map("published_by") @db.Uuid
+  publishedAt         DateTime?              @map("published_at") @db.Timestamptz(6)
+  version             Int                    @default(0)
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, checklistTemplateId, versionNumber])
+  @@map("checklist_template_versions")
+}
+
+model ChecklistTemplateItem {
+  id                         String                @id @default(uuid()) @db.Uuid
+  tenantId                   String                @map("tenant_id") @db.Uuid
+  createdBy                  String                @map("created_by") @db.Uuid
+  createdAt                  DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  checklistTemplateVersionId String                @map("checklist_template_version_id") @db.Uuid
+  section                    String?
+  code                       String
+  description                String
+  responseType               ChecklistResponseType @default(PASS_FAIL_NA) @map("response_type")
+  isRequired                 Boolean               @default(true) @map("is_required")
+  allowComment               Boolean               @default(true) @map("allow_comment")
+  requirePhotoOnFail         Boolean               @default(true) @map("require_photo_on_fail")
+  isHoldPoint                Boolean               @default(false) @map("is_hold_point")
+  sortOrder                  Int                   @map("sort_order")
+
+  @@unique([tenantId, id])
+  @@unique([checklistTemplateVersionId, code])
+  @@index([tenantId, checklistTemplateVersionId, sortOrder])
+  @@map("checklist_template_items")
+}
+
+model InspectionRequest {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  tenantId                String                  @map("tenant_id") @db.Uuid
+  projectId               String                  @map("project_id") @db.Uuid
+  createdBy               String                  @map("created_by") @db.Uuid
+  createdAt               DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  requestNumber           Int                     @map("request_number")
+  code                    String
+  title                   String
+  description             String?
+  requestedInspectionDate DateTime                @map("requested_inspection_date") @db.Date
+  scheduleTaskId          String?                 @map("schedule_task_id") @db.Uuid
+  budgetItemId            String?                 @map("budget_item_id") @db.Uuid
+  dailyLogId              String?                 @map("daily_log_id") @db.Uuid
+  contractId              String?                 @map("contract_id") @db.Uuid
+  requestedBy             String                  @map("requested_by") @db.Uuid
+  requestedAt             DateTime                @default(now()) @map("requested_at") @db.Timestamptz(6)
+  assignedInspectorId     String?                 @map("assigned_inspector_id") @db.Uuid
+  status                  InspectionRequestStatus @default(DRAFT)
+  version                 Int                     @default(0)
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, requestNumber])
+  @@index([tenantId, projectId, status])
+  @@index([tenantId, projectId, requestedInspectionDate])
+  @@map("inspection_requests")
+}
+
+model Inspection {
+  id                         String            @id @default(uuid()) @db.Uuid
+  tenantId                   String            @map("tenant_id") @db.Uuid
+  projectId                  String            @map("project_id") @db.Uuid
+  createdBy                  String            @map("created_by") @db.Uuid
+  createdAt                  DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                  DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  inspectionRequestId        String?           @map("inspection_request_id") @db.Uuid
+  inspectionNumber           Int               @map("inspection_number")
+  code                       String
+  checklistTemplateVersionId String            @map("checklist_template_version_id") @db.Uuid
+  title                      String
+  description                String?
+  inspectionDate             DateTime          @map("inspection_date") @db.Date
+  scheduleTaskId             String?           @map("schedule_task_id") @db.Uuid
+  budgetItemId               String?           @map("budget_item_id") @db.Uuid
+  dailyLogId                 String?           @map("daily_log_id") @db.Uuid
+  contractId                 String?           @map("contract_id") @db.Uuid
+  measurementId              String?           @map("measurement_id") @db.Uuid
+  inspectorId                String            @map("inspector_id") @db.Uuid
+  status                     InspectionStatus  @default(DRAFT)
+  overallResult              InspectionResult? @map("overall_result")
+  generalComments            String?           @map("general_comments")
+  version                    Int               @default(0)
+  submittedAt                DateTime?         @map("submitted_at") @db.Timestamptz(6)
+  closedAt                   DateTime?         @map("closed_at") @db.Timestamptz(6)
+  closedBy                   String?           @map("closed_by") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, inspectionNumber])
+  @@index([tenantId, projectId, status])
+  @@index([tenantId, projectId, inspectionDate])
+  @@index([tenantId, projectId, inspectorId])
+  @@index([tenantId, projectId, contractId])
+  @@index([tenantId, projectId, scheduleTaskId])
+  @@index([tenantId, projectId, budgetItemId])
+  @@index([tenantId, projectId, inspectionRequestId])
+  @@map("inspections")
+}
+
+model InspectionItem {
+  id                     String           @id @default(uuid()) @db.Uuid
+  tenantId               String           @map("tenant_id") @db.Uuid
+  projectId              String           @map("project_id") @db.Uuid
+  createdBy              String           @map("created_by") @db.Uuid
+  createdAt              DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  inspectionId           String           @map("inspection_id") @db.Uuid
+  templateItemId         String           @map("template_item_id") @db.Uuid
+  result                 ChecklistResult?
+  textValue              String?          @map("text_value")
+  numericValue           Decimal?         @map("numeric_value") @db.Decimal(24, 6)
+  dateValue              DateTime?        @map("date_value") @db.Date
+  comment                String?
+  isNonConformity        Boolean          @default(false) @map("is_non_conformity")
+  holdPointReleasedBy    String?          @map("hold_point_released_by") @db.Uuid
+  holdPointReleasedAt    DateTime?        @map("hold_point_released_at") @db.Timestamptz(6)
+  holdPointReleaseReason String?          @map("hold_point_release_reason")
+
+  @@unique([tenantId, projectId, id])
+  @@unique([inspectionId, templateItemId])
+  @@unique([tenantId, projectId, inspectionId, id])
+  @@index([inspectionId, result])
+  @@map("inspection_items")
+}
+
+model InspectionEvidence {
+  id               String              @id @default(uuid()) @db.Uuid
+  tenantId         String              @map("tenant_id") @db.Uuid
+  projectId        String              @map("project_id") @db.Uuid
+  createdBy        String              @map("created_by") @db.Uuid
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  inspectionId     String              @map("inspection_id") @db.Uuid
+  inspectionItemId String?             @map("inspection_item_id") @db.Uuid
+  documentId       String              @unique @map("document_id") @db.Uuid
+  caption          String?
+  evidenceType     QualityEvidenceType @default(PHOTO) @map("evidence_type")
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, inspectionId])
+  @@map("inspection_evidence")
+}
+
+model NonConformity {
+  id                        String          @id @default(uuid()) @db.Uuid
+  tenantId                  String          @map("tenant_id") @db.Uuid
+  projectId                 String          @map("project_id") @db.Uuid
+  createdBy                 String          @map("created_by") @db.Uuid
+  createdAt                 DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  ncrNumber                 Int             @map("ncr_number")
+  code                      String
+  inspectionId              String?         @map("inspection_id") @db.Uuid
+  inspectionItemId          String?         @map("inspection_item_id") @db.Uuid
+  dailyLogOccurrenceId      String?         @map("daily_log_occurrence_id") @db.Uuid
+  scheduleTaskId            String?         @map("schedule_task_id") @db.Uuid
+  budgetItemId              String?         @map("budget_item_id") @db.Uuid
+  dailyLogId                String?         @map("daily_log_id") @db.Uuid
+  contractId                String?         @map("contract_id") @db.Uuid
+  measurementId             String?         @map("measurement_id") @db.Uuid
+  title                     String
+  description               String
+  severity                  QualitySeverity
+  category                  QualityCategory
+  status                    NcrStatus       @default(OPEN)
+  responsibleUserId         String?         @map("responsible_user_id") @db.Uuid
+  responsibleOrganizationId String?         @map("responsible_organization_id") @db.Uuid
+  dueDate                   DateTime?       @map("due_date") @db.Date
+  detectedBy                String          @map("detected_by") @db.Uuid
+  detectedAt                DateTime        @default(now()) @map("detected_at") @db.Timestamptz(6)
+  verifiedBy                String?         @map("verified_by") @db.Uuid
+  verifiedAt                DateTime?       @map("verified_at") @db.Timestamptz(6)
+  closedBy                  String?         @map("closed_by") @db.Uuid
+  closedAt                  DateTime?       @map("closed_at") @db.Timestamptz(6)
+  version                   Int             @default(0)
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, ncrNumber])
+  @@index([tenantId, projectId, status])
+  @@index([tenantId, projectId, severity])
+  @@index([tenantId, projectId, category])
+  @@index([tenantId, projectId, dueDate])
+  @@index([tenantId, projectId, responsibleUserId])
+  @@index([tenantId, projectId, responsibleOrganizationId])
+  @@index([tenantId, projectId, contractId])
+  @@index([tenantId, projectId, budgetItemId])
+  @@index([tenantId, projectId, measurementId])
+  @@index([tenantId, projectId, scheduleTaskId])
+  @@index([tenantId, projectId, inspectionId])
+  @@index([tenantId, projectId, detectedAt])
+  @@map("non_conformities")
+}
+
+model CorrectiveAction {
+  id                        String                 @id @default(uuid()) @db.Uuid
+  tenantId                  String                 @map("tenant_id") @db.Uuid
+  projectId                 String                 @map("project_id") @db.Uuid
+  createdBy                 String                 @map("created_by") @db.Uuid
+  createdAt                 DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  nonConformityId           String                 @map("non_conformity_id") @db.Uuid
+  actionNumber              Int                    @map("action_number")
+  description               String
+  responsibleUserId         String?                @map("responsible_user_id") @db.Uuid
+  responsibleOrganizationId String?                @map("responsible_organization_id") @db.Uuid
+  dueDate                   DateTime?              @map("due_date") @db.Date
+  status                    CorrectiveActionStatus @default(OPEN)
+  completionNotes           String?                @map("completion_notes")
+  completedBy               String?                @map("completed_by") @db.Uuid
+  completedAt               DateTime?              @map("completed_at") @db.Timestamptz(6)
+  verifiedBy                String?                @map("verified_by") @db.Uuid
+  verifiedAt                DateTime?              @map("verified_at") @db.Timestamptz(6)
+  version                   Int                    @default(0)
+
+  @@unique([tenantId, projectId, id])
+  @@unique([nonConformityId, actionNumber])
+  @@index([tenantId, projectId, nonConformityId, status])
+  @@index([tenantId, projectId, dueDate])
+  @@index([tenantId, projectId, responsibleUserId])
+  @@map("corrective_actions")
+}
+
+model CorrectiveActionEvidence {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  projectId          String   @map("project_id") @db.Uuid
+  createdBy          String   @map("created_by") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  correctiveActionId String   @map("corrective_action_id") @db.Uuid
+  documentId         String   @unique @map("document_id") @db.Uuid
+  caption            String?
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, correctiveActionId])
+  @@map("corrective_action_evidence")
+}
+
+model NonConformityEvent {
+  id              String       @id @default(uuid()) @db.Uuid
+  tenantId        String       @map("tenant_id") @db.Uuid
+  projectId       String       @map("project_id") @db.Uuid
+  createdBy       String       @map("created_by") @db.Uuid
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  nonConformityId String       @map("non_conformity_id") @db.Uuid
+  eventType       NcrEventType @map("event_type")
+  fromStatus      NcrStatus?   @map("from_status")
+  toStatus        NcrStatus?   @map("to_status")
+  comment         String?
+  userId          String       @map("user_id") @db.Uuid
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, nonConformityId, createdAt])
+  @@map("non_conformity_events")
+}
+
+model NonConformityComment {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  projectId       String   @map("project_id") @db.Uuid
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  nonConformityId String   @map("non_conformity_id") @db.Uuid
+  comment         String
+
+  @@unique([tenantId, projectId, id])
+  @@index([tenantId, projectId, nonConformityId, createdAt])
+  @@map("non_conformity_comments")
+}
+
+model QualityPolicy {
+  id                                String   @id @default(uuid()) @db.Uuid
+  tenantId                          String   @map("tenant_id") @db.Uuid
+  projectId                         String   @map("project_id") @db.Uuid
+  createdBy                         String   @map("created_by") @db.Uuid
+  createdAt                         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  blockMeasurementOnOpenCriticalNcr Boolean  @default(true) @map("block_measurement_on_open_critical_ncr")
+  preventSelfVerification           Boolean  @default(true) @map("prevent_self_verification")
+  version                           Int      @default(0)
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId])
+  @@map("quality_policies")
+}
+
+model Notification {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  projectId    String    @map("project_id") @db.Uuid
+  createdBy    String    @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId       String    @map("user_id") @db.Uuid
+  eventKey     String    @map("event_key")
+  type         String
+  title        String
+  resourcePath String    @map("resource_path")
+  readAt       DateTime? @map("read_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, projectId, id])
+  @@unique([tenantId, projectId, userId, eventKey])
+  @@index([tenantId, userId, readAt, createdAt])
+  @@map("notifications")
 }

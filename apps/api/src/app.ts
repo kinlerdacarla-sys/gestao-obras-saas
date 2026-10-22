@@ -1,3 +1,8 @@
+import { completeQualityDocs } from "./quality/docs.js";
+import {
+  InspectionModule,
+  NonConformityModule,
+} from "./quality/quality.module.js";
 import { completeFinancialDocs } from "./financial/docs.js";
 import "reflect-metadata";
 import {
@@ -37,6 +42,8 @@ import { completeExecutionDocs } from "./schedule/docs.js";
 @Module({
   imports: [
     PlatformModule,
+    InspectionModule,
+    NonConformityModule,
     MeasurementModule,
     FundingModule,
     PaymentModule,
@@ -73,9 +80,9 @@ export async function createApp() {
     const config = new DocumentBuilder()
       .setTitle("Obras • Core SaaS")
       .setDescription(
-        "M1 + M2 + M3 + M4 + M5. Cookies HttpOnly; mutações exigem Origin igual a WEB_ORIGIN. Valores monetários e progresso são strings decimais.",
+        "M1 + M2 + M3 + M4 + M5 + M6. Cookies HttpOnly; mutações exigem Origin igual a WEB_ORIGIN. Valores monetários e progresso são strings decimais.",
       )
-      .setVersion("5.0.0")
+      .setVersion("6.0.0")
       .addCookieAuth("access")
       .build();
     const document = SwaggerModule.createDocument(app, config);
@@ -84,6 +91,7 @@ export async function createApp() {
     completeExecutionDocs(document);
     completeCommercialDocs(document);
     completeFinancialDocs(document);
+    completeQualityDocs(document);
     document.security = [{ access: [] }];
     SwaggerModule.setup("api/docs", app, document);
   }

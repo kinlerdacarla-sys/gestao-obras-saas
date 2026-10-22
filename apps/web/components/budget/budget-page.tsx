@@ -244,6 +244,7 @@ export function BudgetPage({
               )}
               <Card title="Estrutura orçamental">
                 <BudgetTree
+                  projectId={id}
                   nodes={revision.items}
                   editable={editor && !busy && revision.status === "DRAFT"}
                   onEdit={setEditing}

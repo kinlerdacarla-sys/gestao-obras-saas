@@ -1,3 +1,4 @@
+import { seedQuality } from "./seed-quality.js";
 import { seedFinancial } from "./seed-financial.js";
 import { seedCommercial } from "./seed-commercial.js";
 import { seedExecution } from "./seed-execution.js";
@@ -117,6 +118,14 @@ try {
     users.find((x) => x.role === "MANAGER")!.user.id,
     users.find((x) => x.role === "INSPECTOR")!.user.id,
     users.find((x) => x.role === "FINANCIER")!.user.id,
+  );
+  await seedQuality(
+    db,
+    tenant.id,
+    project.id,
+    admin.id,
+    users.find((x) => x.role === "MANAGER")!.user.id,
+    users.find((x) => x.role === "INSPECTOR")!.user.id,
   );
   console.info("Seed concluído: construtora-demo / admin@example.com");
 } finally {

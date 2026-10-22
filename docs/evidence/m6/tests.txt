@@ -1,0 +1,14 @@
+ Test Files  8 passed (8)
+      Tests  172 passed (172)
+QUALITY_FIXTURE_MS 168151.944907
+QUALITY_SCALE {"inspections":10000,"items":100000,"ncr":50000,"actions":100000,"queryMs":131.805806999997}
+ Test Files  6 passed (6)
+      Tests  173 passed (173)
+✓ Compiled successfully in 3.2s
+  Finished TypeScript in 5.2s ...
+
+work/m6-release.txt
+  13 passed (1.4m)
+
+work/m6-report-final.txt
+  2 passed (31.3s)

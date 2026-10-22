@@ -1,3 +1,4 @@
+import { checkQualityCertification } from "../quality/measurement-block.js";
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { Decimal } from "decimal.js";
@@ -811,6 +812,7 @@ export class FinancialService {
           });
         } else if (action === "certify") {
           requireState(["APPROVED"]);
+          await checkQualityCertification(tx, scope, m);
           if (
             await tx.measurement.count({
               where: {

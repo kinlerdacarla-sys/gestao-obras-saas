@@ -1,17 +1,21 @@
 "use client";
+import { QualityIndicator } from "../quality/common";
 import { useState } from "react";
 import { type BudgetNode, formatMoney } from "./common";
 export function BudgetTree({
   nodes,
+  projectId,
   editable,
   onEdit,
   onRemove,
 }: {
   nodes: BudgetNode[];
+  projectId?: string;
   editable: boolean;
   onEdit: (node: BudgetNode) => void;
   onRemove: (node: BudgetNode) => void;
 }) {
+  const [qualityItem, setQualityItem] = useState<string>();
   const [collapsed, setCollapsed] = useState(new Set<string>()),
     [limit, setLimit] = useState(200);
   const visible: { node: BudgetNode; depth: number }[] = [];
@@ -40,6 +44,13 @@ export function BudgetTree({
   }
   return (
     <>
+      {projectId && qualityItem && (
+        <QualityIndicator
+          projectId={projectId}
+          kind="budget"
+          id={qualityItem}
+        />
+      )}
       <div className="table-wrap">
         <table>
           <thead>
@@ -70,6 +81,14 @@ export function BudgetTree({
                     </button>
                   )}
                   <strong>{node.code}</strong> {node.description}
+                  {projectId && node.itemType === "ITEM" && (
+                    <button
+                      className="secondary"
+                      onClick={() => setQualityItem(node.budgetItemId)}
+                    >
+                      Qualidade {node.code}
+                    </button>
+                  )}
                 </td>
                 <td>{node.unit ?? "—"}</td>
                 <td>{node.quantity ?? "—"}</td>

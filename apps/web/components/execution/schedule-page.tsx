@@ -1,4 +1,5 @@
 "use client";
+import { QualityIndicator } from "../quality/common";
 import { useEffect, useState } from "react";
 import { Notice } from "@obras/ui";
 import { api, send } from "../../lib/api";
@@ -412,6 +413,9 @@ export function SchedulePage({ id }: { id: string }) {
                 )
               }
             />
+          )}
+          {selected && (
+            <QualityIndicator projectId={id} kind="schedule" id={selected.id} />
           )}
           {form === "progress" && selected && (
             <section>

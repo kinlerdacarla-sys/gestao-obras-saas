@@ -1,4 +1,5 @@
 "use client";
+import { useMe } from "../shell";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Notice } from "@obras/ui";
@@ -376,6 +377,7 @@ const fieldNames: Record<string, string> = {
   text: "Observação",
 };
 export function DailyLogPage({ id, logId }: { id: string; logId: string }) {
+  const qualityMe = useMe();
   const [budgetItems, setBudgetItems] = useState<
     { value: string; label: string }[]
   >([]);
@@ -729,6 +731,14 @@ export function DailyLogPage({ id, logId }: { id: string; logId: string }) {
                     {stateNames[String(value)] ?? String(value)}
                   </p>
                 ))}
+              {tab === "occurrences" &&
+                ["ADMIN", "INSPECTOR"].includes(qualityMe.role) && (
+                  <Link
+                    href={`/projects/${id}/non-conformities?occurrence=${row.id}&dailyLog=${logId}&title=${encodeURIComponent(String(row.title))}`}
+                  >
+                    Criar NCR desta ocorrência
+                  </Link>
+                )}
               {tab === "activities" && data.permissions.edit && (
                 <button
                   className="secondary"
