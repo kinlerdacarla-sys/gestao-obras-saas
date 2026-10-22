@@ -1,3 +1,11 @@
+import {
+  dailyDigest,
+  queueNotificationEmail,
+  deliverNotificationEmail,
+} from "./email.js";
+import { ReportService } from "../../api/src/report/report.service.js";
+import { intelligenceContext } from "./intelligence.js";
+import { snapshotProjectKpis, closeIntelligence } from "./intelligence.js";
 import { monitorQualityDeadlines } from "./quality.js";
 import "dotenv/config";
 import { Worker, Queue } from "bullmq";
@@ -8,6 +16,89 @@ import { redisConnection } from "../../../packages/config/src/redis.js";
 import { Database } from "../../api/src/platform.js";
 import { processBudgetImport } from "../../api/src/budget/import-stage.js";
 const db = new Database();
+const emailQueue = new Queue("email-notification", {
+  connection: redisConnection(),
+});
+const emailWorker = new Worker(
+  "email-notification",
+  async (job) =>
+    job.name === "scan"
+      ? queueNotificationEmail(db)
+      : deliverNotificationEmail(db, job.data.id),
+  { connection: redisConnection(), concurrency: 2 },
+);
+emailWorker.on("error", (e) => console.error("Email worker", e.message));
+emailWorker.on("failed", (_job, e) =>
+  console.error("Email delivery failed", e.message),
+);
+await emailQueue.upsertJobScheduler(
+  "email-outbox",
+  { every: 60000 },
+  {
+    name: "scan",
+    data: {},
+    opts: { removeOnComplete: 100, removeOnFail: 100 },
+  },
+);
+const digestQueue = new Queue("daily-digest", {
+  connection: redisConnection(),
+});
+const digestWorker = new Worker("daily-digest", () => dailyDigest(db), {
+  connection: redisConnection(),
+  concurrency: 1,
+});
+digestWorker.on("error", (e) => console.error("Daily digest", e.message));
+digestWorker.on("failed", (_job, e) =>
+  console.error("Daily digest failed", e.message),
+);
+await digestQueue.upsertJobScheduler(
+  "daily-digest",
+  { pattern: "0 7 * * *", tz: "Africa/Maputo" },
+  {
+    name: "daily-digest",
+    data: {},
+    opts: { attempts: 3, removeOnComplete: 100, removeOnFail: 100 },
+  },
+);
+const reportWorker = new Worker(
+  "report-generation",
+  async (job) =>
+    (await intelligenceContext()).get(ReportService).process(job.data.id),
+  { connection: redisConnection(), concurrency: 2 },
+);
+reportWorker.on("error", (e) => console.error("Report worker", e.message));
+reportWorker.on("failed", (job, e) =>
+  console.error("Report failed", job?.id, e.message),
+);
+const kpiQueue = new Queue("project-kpi-snapshot", {
+  connection: redisConnection(),
+});
+const kpiWorker = new Worker(
+  "project-kpi-snapshot",
+  async (job) => snapshotProjectKpis(job.data),
+  {
+    connection: redisConnection(),
+    concurrency: 1,
+  },
+);
+kpiWorker.on("error", (e) => console.error("KPI snapshot", e.message));
+kpiWorker.on("failed", (_job, e) =>
+  console.error("KPI snapshot failed", e.message),
+);
+await kpiQueue.upsertJobScheduler(
+  "daily-kpi",
+  { pattern: "15 23 * * *", tz: "Africa/Maputo" },
+  {
+    name: "project-kpi-snapshot",
+    data: {},
+    opts: {
+      attempts: 3,
+      backoff: { type: "exponential", delay: 2000 },
+      removeOnComplete: 100,
+      removeOnFail: 100,
+    },
+  },
+);
 const qualityQueue = new Queue("quality-deadline-monitor", {
   connection: redisConnection(),
 });
@@ -102,6 +193,14 @@ worker.on("failed", (job, error) =>
 worker.on("error", (error) => console.error(error.message));
 for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, async () => {
+    await emailWorker.close();
+    await emailQueue.close();
+    await digestWorker.close();
+    await digestQueue.close();
+    await reportWorker.close();
+    await kpiWorker.close();
+    await kpiQueue.close();
+    await closeIntelligence();
     await qualityWorker.close();
     await qualityQueue.close();
     await worker.close();

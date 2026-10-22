@@ -49,17 +49,36 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {["ADMIN", "MANAGER"].includes(me.role) && (
               <Link href="/suppliers">Fornecedores</Link>
             )}
-            <span aria-disabled="true">Relatórios · em breve</span>
+            {me.role === "ADMIN" && (
+              <Link href="/analytics/compare">Analytics</Link>
+            )}
+            {me.role === "INSPECTOR" && (
+              <>
+                <Link href="/dashboard#inspections">Inspeções</Link>
+                <Link href="/dashboard#ncr">NCR</Link>
+                <Link href="/dashboard#measurements">Medições</Link>
+              </>
+            )}
+            {["CLIENT", "FINANCIER"].includes(me.role) && (
+              <>
+                <Link href="/gallery">Fotos</Link>
+                <Link href="/documents">Documentos</Link>
+              </>
+            )}
+            <Link href="/alerts">Alertas</Link>
+            <Link href="/notifications">Notificações</Link>
+            <Link href="/reports">Relatórios</Link>
             {me.role === "ADMIN" && (
               <>
                 <small>CONFIGURAÇÕES</small>
                 <Link href="/settings/users">Utilizadores</Link>
+                <Link href="/settings/alerts">Alertas e notificações</Link>
                 <Link href="/settings/organizations">Organizações</Link>
               </>
             )}
           </nav>
           <footer>
-            CORE SAAS · M1
+            GESTÃO DE OBRAS
             <br />
             Uma base sólida para cada obra.
           </footer>

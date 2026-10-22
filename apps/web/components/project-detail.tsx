@@ -12,6 +12,7 @@ import {
 import { useMe } from "./shell";
 import { ProjectForm } from "./projects";
 import Link from "next/link";
+import { ProjectExecutive } from "./analytics/dashboard";
 import { BudgetDashboard } from "./budget/common";
 import { OperationalDashboard } from "./execution/common";
 import {
@@ -84,7 +85,46 @@ export function ProjectDetail({ id }: { id: string }) {
     return error ? (
       <Notice error>{error}</Notice>
     ) : (
-      <p role="status">A carregar obraâ€¦</p>
+      <p role="status">A carregar obra…</p>
+    );
+  const projectRole = admin
+    ? "ADMIN"
+    : (participants.find(
+        (x) => x.userId === me.user.id && x.status === "ACTIVE",
+      )?.role ?? me.role);
+  if (["CLIENT", "FINANCIER"].includes(projectRole))
+    return (
+      <>
+        <div className="heading">
+          <div>
+            <span className="eyebrow">
+              {projectRole === "CLIENT"
+                ? "Portal do cliente"
+                : "Portal do financiador"}
+            </span>
+            <h1>{project.name}</h1>
+          </div>
+        </div>
+        <ProjectOverview project={project} />
+        <ProjectExecutive id={id} />
+        <section className="card">
+          <h2>Acompanhar a obra</h2>
+          <nav className="budget-nav">
+            <Link href={`/projects/${id}/budget`}>Abrir Orçamento</Link>
+            <Link href={`/projects/${id}/schedule`}>Cronograma e marcos</Link>
+            <Link href={`/projects/${id}/gallery`}>Fotografias</Link>
+            <Link href={`/projects/${id}/measurements`}>Medições</Link>
+            <Link href={`/projects/${id}/quality`}>Inspeções e qualidade</Link>
+            {projectRole === "FINANCIER" && (
+              <Link href={`/projects/${id}/funding`}>
+                Financiamento e desembolsos
+              </Link>
+            )}
+            <Link href="/reports">Relatórios</Link>
+            <Link href="/documents">Documentos autorizados</Link>
+          </nav>
+        </section>
+      </>
     );
   return (
     <>
@@ -137,6 +177,7 @@ export function ProjectDetail({ id }: { id: string }) {
         />
       )}
       <ProjectOverview project={project} />
+      <ProjectExecutive id={id} />
       <BudgetDashboard id={id} />
       <OperationalDashboard id={id} />
       <section className="card">

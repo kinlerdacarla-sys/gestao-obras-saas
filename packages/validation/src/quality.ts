@@ -174,6 +174,7 @@ export const query = z
     responsible_user: id.optional(),
     responsible_organization: id.optional(),
     overdue: z.enum(["true", "false"]).optional(),
+    active: z.enum(["true", "false"]).optional(),
     contract: id.optional(),
     schedule_task: id.optional(),
     budget_item: id.optional(),

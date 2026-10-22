@@ -636,3 +636,32 @@ td small {
   margin: 0;
   min-width: 0;
 }
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.analytics-number {
+  font-size: 2rem;
+}
+.analytics-grid h3 {
+  margin-top: 0;
+}
+.table-wrap caption {
+  text-align: left;
+  padding: 12px;
+  color: var(--muted);
+}
+
+.analytics-filter {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+  align-items: end;
+}
+.analytics-filter label {
+  display: grid;
+  gap: 6px;
+}

@@ -1,3 +1,5 @@
+import { notificationScope } from "./scope.js";
+import { recordAudit } from "../audit/audit.module.js";
 import { Database } from "../platform.js";
 import type { ApiRequest } from "../auth/security.js";
 import { uuid } from "../../../../packages/validation/src/index.js";
@@ -34,25 +36,8 @@ export class NotificationService {
 @Controller("api/v1/notifications")
 class NotificationController {
   constructor(@Inject(Database) readonly db: Database) {}
-  async scope(r: ApiRequest) {
-    const projects =
-      r.auth.role === "ADMIN"
-        ? undefined
-        : (
-            await this.db.projectUser.findMany({
-              where: {
-                tenantId: r.auth.tenantId,
-                userId: r.auth.userId,
-                status: "ACTIVE",
-              },
-              select: { projectId: true },
-            })
-          ).map((x) => x.projectId);
-    return {
-      tenantId: r.auth.tenantId,
-      userId: r.auth.userId,
-      ...(projects ? { projectId: { in: projects } } : {}),
-    };
+  scope(r: ApiRequest) {
+    return notificationScope(this.db, r);
   }
   @Get() async list(@Req() r: ApiRequest) {
     return {
@@ -73,6 +58,12 @@ class NotificationController {
     });
     if (!row.count)
       fail(404, "RESOURCE_NOT_FOUND", "Notificação não encontrada");
+    await recordAudit(
+      this.db,
+      r.auth,
+      { action: "NOTIFICATION_READ", entityType: "Notification", entityId: id },
+      r,
+    );
     return { ok: true };
   }
 }

@@ -2132,6 +2132,11 @@ model QualityPolicy {
 }
 
 model Notification {
+  message String?
+  entityType String? @map("entity_type")
+  entityId String? @map("entity_id") @db.Uuid
+  inAppVisible Boolean @default(true) @map("in_app_visible")
+  emailedAt DateTime? @map("emailed_at") @db.Timestamptz(6)
   id           String    @id @default(uuid()) @db.Uuid
   tenantId     String    @map("tenant_id") @db.Uuid
   projectId    String    @map("project_id") @db.Uuid
@@ -2149,4 +2154,153 @@ model Notification {
   @@unique([tenantId, projectId, userId, eventKey])
   @@index([tenantId, userId, readAt, createdAt])
   @@map("notifications")
+}
+
+enum ExecutiveAlertType {
+  SCHEDULE_DELAY
+  BUDGET_OVERRUN_RISK
+  CONTRACT_OVER_BUDGET
+  FUNDING_LOW
+  PAYMENT_OVERDUE
+  MEASUREMENT_PENDING_APPROVAL
+  NCR_OVERDUE
+  NCR_CRITICAL
+  CONTRACT_EXPIRING
+  INSPECTION_PENDING
+  DAILY_LOG_MISSING
+}
+
+enum ExecutiveAlertSeverity {
+  INFO
+  WARNING
+  HIGH
+  CRITICAL
+}
+
+enum ExecutiveAlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum ReportType {
+  PROJECT_EXECUTIVE
+  PROJECT_PROGRESS
+  FINANCIAL
+  MEASUREMENTS
+  CONTRACTS
+  QUALITY
+  DAILY_LOG
+  FUNDING
+  PORTFOLIO
+}
+
+enum ReportFormat {
+  PDF
+  XLSX
+}
+
+enum ReportStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+model ProjectKpiSnapshot {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  projectId        String   @map("project_id") @db.Uuid
+  snapshotDate     DateTime @map("snapshot_date") @db.Date
+  plannedProgress  Decimal? @map("planned_progress") @db.Decimal(5, 2)
+  actualProgress   Decimal? @map("actual_progress") @db.Decimal(5, 2)
+  approvedBudget   Decimal  @map("approved_budget") @db.Decimal(18, 2)
+  currentContracts Decimal  @map("current_contracts") @db.Decimal(18, 2)
+  certified        Decimal  @db.Decimal(18, 2)
+  paid             Decimal  @db.Decimal(18, 2)
+  fundingDisbursed Decimal  @map("funding_disbursed") @db.Decimal(18, 2)
+  openNcr          Int      @map("open_ncr")
+  criticalNcr      Int      @map("critical_ncr")
+  overdueNcr       Int      @map("overdue_ncr")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, projectId, snapshotDate])
+  @@index([tenantId, snapshotDate])
+  @@map("project_kpi_snapshots")
+}
+
+model Alert {
+  id               String                 @id @default(uuid()) @db.Uuid
+  tenantId         String                 @map("tenant_id") @db.Uuid
+  projectId        String?                @map("project_id") @db.Uuid
+  alertType        ExecutiveAlertType     @map("alert_type")
+  severity         ExecutiveAlertSeverity
+  title            String
+  message          String
+  entityType       String                 @map("entity_type")
+  entityId         String                 @map("entity_id") @db.Uuid
+  status           ExecutiveAlertStatus   @default(ACTIVE)
+  detectedAt       DateTime               @default(now()) @map("detected_at") @db.Timestamptz(6)
+  resolvedAt       DateTime?              @map("resolved_at") @db.Timestamptz(6)
+  resolvedBy       String?                @map("resolved_by") @db.Uuid
+  deduplicationKey String                 @map("deduplication_key")
+  version          Int                    @default(0)
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([tenantId, projectId, status, severity])
+  @@map("alerts")
+}
+
+model AlertSetting {
+  tenantId                      String   @id @map("tenant_id") @db.Uuid
+  scheduleDelayThresholdPP      Decimal  @default(5) @map("schedule_delay_threshold_pp") @db.Decimal(5, 2)
+  fundingLowThresholdPercentage Decimal  @default(10) @map("funding_low_threshold_percentage") @db.Decimal(5, 2)
+  contractExpiryDays            Int      @default(30) @map("contract_expiry_days")
+  missingDailyLogDays           Int      @default(3) @map("missing_daily_log_days")
+  enableEmail                   Boolean  @default(false) @map("enable_email")
+  enableInApp                   Boolean  @default(true) @map("enable_in_app")
+  updatedAt                     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("alert_settings")
+}
+
+model NotificationPreference {
+  tenantId                 String   @map("tenant_id") @db.Uuid
+  userId                   String   @map("user_id") @db.Uuid
+  emailEnabled             Boolean  @default(false) @map("email_enabled")
+  inAppEnabled             Boolean  @default(true) @map("in_app_enabled")
+  dailyDigestEnabled       Boolean  @default(false) @map("daily_digest_enabled")
+  inspectionNotifications  Boolean  @default(true) @map("inspection_notifications")
+  measurementNotifications Boolean  @default(true) @map("measurement_notifications")
+  qualityNotifications     Boolean  @default(true) @map("quality_notifications")
+  financialNotifications   Boolean  @default(true) @map("financial_notifications")
+  scheduleNotifications    Boolean  @default(true) @map("schedule_notifications")
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@id([tenantId, userId])
+  @@map("notification_preferences")
+}
+
+model ReportJob {
+  id           String       @id @default(uuid()) @db.Uuid
+  tenantId     String       @map("tenant_id") @db.Uuid
+  projectId    String?      @map("project_id") @db.Uuid
+  reportType   ReportType   @map("report_type")
+  format       ReportFormat
+  parameters   Json         @db.JsonB
+  status       ReportStatus @default(QUEUED)
+  requestedBy  String       @map("requested_by") @db.Uuid
+  objectKey    String?      @map("object_key")
+  errorMessage String?      @map("error_message")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  startedAt    DateTime?    @map("started_at") @db.Timestamptz(6)
+  completedAt  DateTime?    @map("completed_at") @db.Timestamptz(6)
+  expiresAt    DateTime     @map("expires_at") @db.Timestamptz(6)
+
+  @@index([tenantId, requestedBy, createdAt])
+  @@index([tenantId, projectId, status])
+  @@map("report_jobs")
 }

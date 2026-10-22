@@ -1,4 +1,4 @@
-# Obras — M1 Core SaaS + M2 Orçamento + M3 Execução
+# Obras — Gestão de obras M1–M7
 
 Fundação SaaS para gestão de obras: autenticação, empresas cliente, utilizadores, organizações, perfis, obras, participantes e auditoria. Inclui o M2: orçamento hierárquico, revisões imutáveis, importação/preview XLSX, aprovação, comparação e exportação. Consulte [o módulo Budget](docs/budget.md) e [os resultados de validação M2](docs/validation-m2.md).
 
@@ -229,3 +229,32 @@ O seed inclui CHK-FUND, CHK-STRUCT e CHK-MASON; IR-001, uma inspeção com sete 
 A política de bloquear certificação com NCR crítica não encerrada está ativa por omissão. O bloqueio aplica-se no instante da certificação; não bloqueia retroativamente o pagamento de medições já certificadas. Consulte a regra exata na documentação do fluxo.
 
 Resultados e evidências da M6: [validação completa](docs/validation-m6.md).
+
+
+## M7 — Intelligence, relatórios e portais
+
+Dashboards por perfil, comparação de obras, curva S, snapshots, alertas, notificações, relatórios privados PDF/XLSX e portais de cliente/financiador. Consulte [analytics e fórmulas](docs/analytics.md), [dashboards e teste manual](docs/dashboards.md), [alertas](docs/alerts.md), [notificações/email](docs/notifications.md), [relatórios](docs/reports.md), [cliente](docs/client-portal.md) e [financiador](docs/financier-portal.md).
+
+### Arranque numa máquina nova
+
+```bash
+git clone https://github.com/kinlerdacarla-sys/gestao-obras-saas.git
+cd gestao-obras-saas
+cp .env.example .env
+docker compose config --quiet
+docker compose up --build -d --wait --wait-timeout 240
+docker compose exec api npx prisma migrate status
+docker compose ps
+```
+
+No PowerShell, usar `Copy-Item .env.example .env`. O Compose aplica migrations e seed automaticamente antes de iniciar a API; não depende de PostgreSQL/Redis instalados no computador. O worker e API partilham o volume privado de documentos para exportações. Os defaults são apenas para demonstração local. Não executar `down -v` sobre dados que se pretendem preservar.
+
+### Regressão reproduzível
+
+```bash
+docker compose --profile validation up -d --wait postgres-test redis-test
+docker compose --profile validation build tests
+docker compose --profile validation run --rm tests
+```
+
+O perfil executa migrations, lint, typecheck, testes unitários, integração, seed, build de produção e E2E com Chromium. Usa PostgreSQL/Redis isolados e volume documental próprio. Para repetir a partir de base vazia, recriar apenas `postgres-test` e `redis-test` com `--force-recreate`; não fazê-lo durante testes em execução. A CI executa estas verificações e smoke test Compose; não faz deploy.

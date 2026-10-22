@@ -31,11 +31,17 @@ const categories = [
   "PROCESS",
   "OTHER",
 ];
-export function NonConformities({ id }: { id: string }) {
+export function NonConformities({
+  id,
+  initialQuery = "",
+}: {
+  id: string;
+  initialQuery?: string;
+}) {
   const me = useMe(),
     o = useQuality(id),
     [rows, setRows] = useState<Row[]>([]),
-    [query, setQuery] = useState(""),
+    [query, setQuery] = useState(initialQuery),
     [page, setPage] = useState(1),
     [total, setTotal] = useState(0),
     [error, setError] = useState("");
@@ -58,11 +64,22 @@ export function NonConformities({ id }: { id: string }) {
       {error && <Notice error>{error}</Notice>}
       <EntryForm
         title="Filtrar NCR"
+        key={query}
         fields={[
           { name: "search", label: "Pesquisar" },
           {
+            name: "active",
+            label: "Apenas NCR ativas",
+            value: new URLSearchParams(query).get("active") ?? "",
+            options: [
+              { value: "true", label: "Sim" },
+              { value: "false", label: "Todas" },
+            ],
+          },
+          {
             name: "severity",
             label: "Severidade",
+            value: new URLSearchParams(query).get("severity") ?? "",
             options: choices(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
           },
           {

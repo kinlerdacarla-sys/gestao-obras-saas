@@ -1093,7 +1093,11 @@ export class QualityService {
       fail(400, "VALIDATION_ERROR", "Estado de NCR inválido");
     return {
       ...s,
-      ...(q.status ? { status: q.status as Prisma.EnumNcrStatusFilter } : {}),
+      ...(q.status
+        ? { status: q.status as Prisma.EnumNcrStatusFilter }
+        : q.active === "true"
+          ? { status: { in: [...active] } }
+          : {}),
       ...(q.severity ? { severity: q.severity } : {}),
       ...(q.category ? { category: q.category } : {}),
       ...(q.contract ? { contractId: q.contract } : {}),
@@ -1936,7 +1940,7 @@ export class QualityService {
  AND (${q.date_from ?? null}::date IS NULL OR detected_at>=${q.date_from ?? null}::date)
  AND (${q.date_to ?? null}::date IS NULL OR detected_at<${q.date_to ?? null}::date+interval '1 day')
  AND (${q.search ?? null}::text IS NULL OR title ILIKE '%'||${q.search ?? null}||'%' OR code ILIKE '%'||${q.search ?? null}||'%')
- AND ${q.overdue !== "true"}`,
+ AND ${q.overdue !== "true"} AND ${q.active !== "true"}`,
         ]);
         const completed = groups.filter((x) => x.status === "CLOSED"),
           passed = completed

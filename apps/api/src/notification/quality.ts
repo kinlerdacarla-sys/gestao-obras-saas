@@ -1,3 +1,4 @@
+import { notificationChannels } from "../../../../packages/domain/src/notifications.js";
 import type { Prisma } from "../generated/prisma/client.js";
 import type { Scope } from "../schedule/access.js";
 // Shared durable in-app notification delivery. Transactional with the source event.
@@ -27,18 +28,31 @@ export async function notifyQuality(
     where: { tenantId: s.tenantId, status: "ACTIVE", role: "ADMIN" },
     select: { userId: true },
   });
+  const preferences = await tx.notificationPreference.findMany({
+    where: { tenantId: s.tenantId },
+  });
+  const ids = [...new Set([...recipients, ...admins.map((x) => x.userId)])];
   await tx.notification.createMany({
-    data: [...new Set([...recipients, ...admins.map((x) => x.userId)])].map(
-      (userId) => ({
-        ...s,
-        createdBy: actor,
-        userId,
-        eventKey,
+    data: ids.flatMap((userId) => {
+      const channels = notificationChannels(
         type,
-        title,
-        resourcePath,
-      }),
-    ),
+        preferences.find((x) => x.userId === userId) ?? null,
+      );
+      return channels.inApp || channels.email
+        ? [
+            {
+              ...s,
+              createdBy: actor,
+              userId,
+              eventKey,
+              type,
+              title,
+              resourcePath,
+              inAppVisible: channels.inApp,
+            },
+          ]
+        : [];
+    }),
     skipDuplicates: true,
   });
 }

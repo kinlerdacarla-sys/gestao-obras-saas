@@ -1,3 +1,4 @@
+import { seedIntelligence } from "./seed-intelligence.js";
 import { seedQuality } from "./seed-quality.js";
 import { seedFinancial } from "./seed-financial.js";
 import { seedCommercial } from "./seed-commercial.js";
@@ -127,6 +128,7 @@ try {
     users.find((x) => x.role === "MANAGER")!.user.id,
     users.find((x) => x.role === "INSPECTOR")!.user.id,
   );
+  await seedIntelligence(db, tenant.id, users);
   console.info("Seed concluído: construtora-demo / admin@example.com");
 } finally {
   await db.$disconnect();

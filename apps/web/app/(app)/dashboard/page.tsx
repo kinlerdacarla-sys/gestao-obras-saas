@@ -1,4 +1,4 @@
-import { Dashboard } from "../../../components/projects";
+import { ExecutiveDashboard } from "../../../components/analytics/dashboard";
 export default function Page() {
-  return <Dashboard />;
+  return <ExecutiveDashboard />;
 }

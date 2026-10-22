@@ -1,3 +1,8 @@
+import { completeIntelligenceDocs } from "./analytics/docs.js";
+import { ReportModule } from "./report/report.module.js";
+import { NotificationCenterModule } from "./notification/center.module.js";
+import { AlertModule } from "./alerts/alerts.module.js";
+import { AnalyticsModule } from "./analytics/analytics.module.js";
 import { completeQualityDocs } from "./quality/docs.js";
 import {
   InspectionModule,
@@ -42,6 +47,9 @@ import { completeExecutionDocs } from "./schedule/docs.js";
 @Module({
   imports: [
     PlatformModule,
+    AnalyticsModule,
+    ReportModule,
+    AlertModule,
     InspectionModule,
     NonConformityModule,
     MeasurementModule,
@@ -55,6 +63,7 @@ import { completeExecutionDocs } from "./schedule/docs.js";
     AuditModule,
     HealthModule,
     NotificationModule,
+    NotificationCenterModule,
     BudgetModule,
     ScheduleModule,
     DailyLogModule,
@@ -80,9 +89,9 @@ export async function createApp() {
     const config = new DocumentBuilder()
       .setTitle("Obras • Core SaaS")
       .setDescription(
-        "M1 + M2 + M3 + M4 + M5 + M6. Cookies HttpOnly; mutações exigem Origin igual a WEB_ORIGIN. Valores monetários e progresso são strings decimais.",
+        "M1 + M2 + M3 + M4 + M5 + M6 + M7. Cookies HttpOnly; mutações exigem Origin igual a WEB_ORIGIN. Valores monetários e progresso são strings decimais.",
       )
-      .setVersion("6.0.0")
+      .setVersion("7.0.0")
       .addCookieAuth("access")
       .build();
     const document = SwaggerModule.createDocument(app, config);
@@ -92,6 +101,7 @@ export async function createApp() {
     completeCommercialDocs(document);
     completeFinancialDocs(document);
     completeQualityDocs(document);
+    completeIntelligenceDocs(document);
     document.security = [{ access: [] }];
     SwaggerModule.setup("api/docs", app, document);
   }

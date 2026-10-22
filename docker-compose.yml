@@ -34,6 +34,9 @@ services:
       WEB_ORIGIN: http://localhost:3000
       JWT_SECRET: ${JWT_SECRET:-local-development-only-change-this-secret-before-production}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-Demo-Obras!2026}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-stream}
+      MAIL_FROM: ${MAIL_FROM:-obras@example.test}
+      SMTP_URL: ${SMTP_URL:-}
       PORT: 3001
       BUDGET_STORAGE_PATH: /data/budget-storage
       DOCUMENT_STORAGE_PATH: /data/document-storage
@@ -78,7 +81,7 @@ services:
       dockerfile: infrastructure/docker/Dockerfile
       target: application
     environment: *environment
-    volumes: ["budget_storage:/data/budget-storage"]
+    volumes: ["budget_storage:/data/budget-storage", "document_storage:/data/document-storage"]
     command: ["npm", "run", "dev:worker"]
     depends_on:
       api: { condition: service_healthy }
@@ -129,6 +132,7 @@ services:
       WORKER_HEALTH_PORT: 3003
       BUDGET_STORAGE_PATH: /app/work/budget-storage
       NEXT_TELEMETRY_DISABLED: "1"
+    volumes: ["document_storage_test:/app/work/document-storage"]
     shm_size: 1gb
     depends_on:
       postgres-test: { condition: service_healthy }
@@ -138,3 +142,4 @@ volumes:
   redis_data:
   budget_storage:
   document_storage:
+  document_storage_test:

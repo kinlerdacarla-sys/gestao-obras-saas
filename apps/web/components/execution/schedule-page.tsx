@@ -60,7 +60,13 @@ interface ScheduleData {
   plannedProgress: string;
   deviation: string;
 }
-export function SchedulePage({ id }: { id: string }) {
+export function SchedulePage({
+  id,
+  initialDelayed = false,
+}: {
+  id: string;
+  initialDelayed?: boolean;
+}) {
   const me = useMe(),
     base = `/projects/${id}`;
   const [data, setData] = useState<ScheduleData>(),
@@ -75,7 +81,7 @@ export function SchedulePage({ id }: { id: string }) {
     [search, setSearch] = useState(""),
     [status, setStatus] = useState(""),
     [type, setType] = useState(""),
-    [delayed, setDelayed] = useState(false),
+    [delayed, setDelayed] = useState(initialDelayed),
     [page, setPage] = useState(1),
     [history, setHistory] = useState<{
       items: {
