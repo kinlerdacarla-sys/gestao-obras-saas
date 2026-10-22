@@ -258,3 +258,5 @@ docker compose --profile validation run --rm tests
 ```
 
 O perfil executa migrations, lint, typecheck, testes unitários, integração, seed, build de produção e E2E com Chromium. Usa PostgreSQL/Redis isolados e volume documental próprio. Para repetir a partir de base vazia, recriar apenas `postgres-test` e `redis-test` com `--force-recreate`; não fazê-lo durante testes em execução. A CI executa estas verificações e smoke test Compose; não faz deploy.
+
+Evidências e limites da validação M7: [relatório de validação](docs/validation-m7.md).

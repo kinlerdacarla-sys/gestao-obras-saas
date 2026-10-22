@@ -144,9 +144,15 @@ export async function renderReport(
     "Os indicadores refletem os dados aprovados disponíveis na emissão. Previsões e aproximações são identificadas nas respetivas secções.",
   );
   for (const section of sections) {
+    document.fontSize(9);
+    const firstRecord = Object.entries(section.rows[0] ?? {})
+      .map(([key, val]) => `${label(key)}: ${text(val)}`)
+      .join("\n");
+    const headingSpace =
+      110 + Math.min(600, document.heightOfString(firstRecord, { width: 495 }));
     if (
       section === sections[0] ||
-      document.y > 570 ||
+      document.y + headingSpace > document.page.height - 84 ||
       section.title === "Curva S"
     )
       document.addPage();
