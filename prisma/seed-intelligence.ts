@@ -279,6 +279,10 @@ async function healthyBudget(
       });
     }
     await tx.budgetRevision.update({
+      where: { id: source.id },
+      data: { status: "SUPERSEDED" },
+    });
+    await tx.budgetRevision.update({
       where: { id: revision.id },
       data: {
         status: "APPROVED",
