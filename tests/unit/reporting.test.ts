@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js";
 import { describe, it, expect } from "vitest";
 import ExcelJS from "exceljs";
 import { mayRequestReport } from "../../packages/domain/src/reports.js";
@@ -17,7 +18,9 @@ describe("M7 reports and notification rules", () => {
     const sections = [
       {
         title: "Portfolio",
-        rows: [{ Obra: '=HYPERLINK("evil")', Valor: "25000000.00" }],
+        rows: [
+          { Obra: '=HYPERLINK("evil")', Valor: new Decimal("25000000.25") },
+        ],
       },
     ];
     const pdf = await renderReport("PDF", "Relatório de teste", sections);
@@ -26,6 +29,7 @@ describe("M7 reports and notification rules", () => {
       book = new ExcelJS.Workbook();
     await book.xlsx.load(bytes as unknown as ExcelJS.Buffer);
     expect(book.worksheets[0].getCell("A2").value).toBe('=HYPERLINK("evil")');
+    expect(book.worksheets[0].getCell("B2").value).toBe("25000000.25");
     expect(book.worksheets[0].getCell("A2").type).toBe(
       ExcelJS.ValueType.String,
     );

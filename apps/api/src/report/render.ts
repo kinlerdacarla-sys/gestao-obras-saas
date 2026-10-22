@@ -64,13 +64,15 @@ const text = (v: unknown): string =>
     ? "Sem dados"
     : v instanceof Date
       ? v.toISOString().slice(0, 10)
-      : Array.isArray(v)
-        ? v.map(text).join("; ") || "Sem registos"
-        : typeof v === "object"
-          ? Object.entries(v)
-              .map(([key, value]) => `${label(key)}: ${text(value)}`)
-              .join("; ")
-          : String(v);
+      : typeof v === "object" && "toJSON" in v && typeof v.toJSON === "function"
+        ? text(v.toJSON())
+        : Array.isArray(v)
+          ? v.map(text).join("; ") || "Sem registos"
+          : typeof v === "object"
+            ? Object.entries(v)
+                .map(([key, value]) => `${label(key)}: ${text(value)}`)
+                .join("; ")
+            : String(v);
 export async function renderReport(
   format: "PDF" | "XLSX",
   title: string,
