@@ -47,6 +47,7 @@ describe("M8 isolated commercial foundations", () => {
   beforeAll(async () => {
     app = await createApp();
     await app.init();
+    await cache.del("auth:ip:127.0.0.1", "auth:ip:::ffff:127.0.0.1");
     await seedSaas(db);
     starter = (
       await db.subscriptionPlan.findUniqueOrThrow({
