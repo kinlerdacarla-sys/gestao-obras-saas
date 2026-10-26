@@ -11,8 +11,8 @@ CI desse commit: https://github.com/kinlerdacarla-sys/gestao-obras-saas/actions/
 
 ## Implementação atual
 
-- Migration aditiva `202610260015_saas_commercialization`, aplicada apenas ao PostgreSQL
-  isolado de validação. Não altera dados das obras; adiciona CLOSED ao enum de tenant.
+- Migration aditiva `202610260015_saas_commercialization`, validada no PostgreSQL
+  isolado e aplicada no Compose local, preservando os dados existentes. Não altera dados das obras; adiciona CLOSED ao enum de tenant.
 - Identidades PLATFORM SUPER_ADMIN/SUPPORT distintas de Tenant ADMIN. Sessões opacas,
   hash no banco, cookie HttpOnly com caminho de plataforma, CSRF Origin, expiração de
   30 minutos e reautenticação após 10 minutos para ações críticas. MFA ainda não implementado.
