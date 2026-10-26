@@ -1,3 +1,5 @@
+import { safeErrorTracker } from "./saas/observability.js";
+import { SaasPolicyError } from "../../../packages/domain/src/saas.js";
 import {
   ArgumentsHost,
   Catch,
@@ -56,15 +58,20 @@ export const notFound = (): never =>
 export class Errors implements ExceptionFilter {
   catch(error: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
+    if (error instanceof SaasPolicyError)
+      return response.status(409).json({
+        statusCode: 409,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      });
     if (error instanceof CommercialError)
-      return response
-        .status(error.status)
-        .json({
-          statusCode: error.status,
-          code: error.code,
-          message: error.message,
-          details: [],
-        });
+      return response.status(error.status).json({
+        statusCode: error.status,
+        code: error.code,
+        message: error.message,
+        details: [],
+      });
     if (error instanceof ScheduleError)
       return response.status(400).json({
         statusCode: 400,
@@ -133,11 +140,12 @@ export class Errors implements ExceptionFilter {
         message: "Recurso não encontrado",
         details: [],
       });
-    console.error(
-      error instanceof Error
-        ? error.name + ": " + error.message
-        : "Unhandled error",
-    );
+    safeErrorTracker.capture({
+      requestId: String(response.locals.requestId ?? "unknown"),
+      errorType: error instanceof Error ? error.name : "UnknownError",
+      environment: process.env.APP_ENV ?? process.env.NODE_ENV ?? "development",
+      release: process.env.RELEASE_SHA ?? "development",
+    });
     return response.status(500).json({
       statusCode: 500,
       code: "INTERNAL_ERROR",

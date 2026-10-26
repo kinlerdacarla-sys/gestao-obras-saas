@@ -1,3 +1,7 @@
+import nodemailer from "nodemailer";
+import { mkdir, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { notificationScope } from "./scope.js";
 import { recordAudit } from "../audit/audit.module.js";
 import { Database } from "../platform.js";
@@ -18,19 +22,43 @@ import { fail } from "../platform.js";
 @Injectable()
 export class NotificationService {
   ensureAvailable() {
-    if (configuration().NODE_ENV === "production")
-      fail(
-        503,
-        "DELIVERY_UNAVAILABLE",
-        "Configure um fornecedor de e-mail antes de ativar convites e recuperação em produção",
-      );
+    if (
+      configuration().NODE_ENV === "production" &&
+      (!process.env.SMTP_URL ||
+        process.env.MAIL_TRANSPORT !== "smtp" ||
+        !process.env.MAIL_FROM)
+    )
+      fail(503, "DELIVERY_UNAVAILABLE", "Entrega de email não configurada");
   }
   async deliverReset(email: string, token: string) {
     this.ensureAvailable();
-    // Development-only delivery adapter. Never log reset credentials in production.
-    console.info(
-      `[DEV MAIL] ${email}: ${configuration().WEB_ORIGIN}/reset-password?token=${token}`,
-    );
+    const smtp = process.env.MAIL_TRANSPORT === "smtp";
+    if (smtp && !process.env.SMTP_URL)
+      fail(503, "DELIVERY_UNAVAILABLE", "SMTP não configurado");
+    const transport = smtp
+      ? nodemailer.createTransport(process.env.SMTP_URL!)
+      : nodemailer.createTransport({
+          streamTransport: true,
+          buffer: true,
+          newline: "unix",
+        });
+    const message = await transport.sendMail({
+      from: process.env.MAIL_FROM ?? "obras@example.test",
+      to: email,
+      subject: "Definir acesso à plataforma Obras",
+      text: `Defina a sua password através deste link temporário: ${configuration().WEB_ORIGIN}/reset-password?token=${encodeURIComponent(token)}`,
+    });
+    if (!smtp) {
+      const folder = path.resolve(
+        process.env.MAIL_OUTBOX_PATH ?? "work/mail-outbox",
+      );
+      await mkdir(folder, { recursive: true, mode: 0o700 });
+      await writeFile(
+        path.join(folder, `invitation-${randomUUID()}.eml`),
+        message.message,
+        { mode: 0o600 },
+      );
+    }
   }
 }
 @Controller("api/v1/notifications")

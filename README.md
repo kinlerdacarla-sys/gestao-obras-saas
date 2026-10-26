@@ -4,6 +4,8 @@ Fundação SaaS para gestão de obras: autenticação, empresas cliente, utiliza
 
 M3 acrescenta [cronograma, baselines e progresso físico](docs/schedule.md), [diário de obra, recursos e anexos privados](docs/daily-log.md). Na obra, abra **Cronograma** ou **Diário**. O seed cria atividades de demonstração, Baseline 0 e três diários aprovados. Consulte [a validação M3](docs/validation-m3.md).
 
+O M8 está em desenvolvimento. Consulte o [estado de implementação e pendências](docs/implementation-m8.md); esta etapa ainda não constitui uma versão comercial pronta.
+
 ## Pré-requisitos
 
 - Docker: não requer Node, npm, PostgreSQL ou Redis instalados no host.

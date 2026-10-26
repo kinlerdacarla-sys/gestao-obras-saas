@@ -14,6 +14,12 @@ class HealthController {
     @Inject(Database) private readonly db: Database,
     @Inject(Cache) private readonly cache: Cache,
   ) {}
+  @Get("live") live() {
+    return { api: "up" };
+  }
+  @Get("ready") ready() {
+    return this.health();
+  }
   @Get() async health() {
     const [pg, redis] = await Promise.allSettled([
       this.db.$queryRaw`SELECT 1`,

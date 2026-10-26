@@ -19,6 +19,7 @@ enum Role {
 enum TenantStatus {
   ACTIVE
   SUSPENDED
+  CLOSED
   CANCELLED
 }
 
@@ -2132,11 +2133,11 @@ model QualityPolicy {
 }
 
 model Notification {
-  message String?
-  entityType String? @map("entity_type")
-  entityId String? @map("entity_id") @db.Uuid
-  inAppVisible Boolean @default(true) @map("in_app_visible")
-  emailedAt DateTime? @map("emailed_at") @db.Timestamptz(6)
+  message      String?
+  entityType   String?   @map("entity_type")
+  entityId     String?   @map("entity_id") @db.Uuid
+  inAppVisible Boolean   @default(true) @map("in_app_visible")
+  emailedAt    DateTime? @map("emailed_at") @db.Timestamptz(6)
   id           String    @id @default(uuid()) @db.Uuid
   tenantId     String    @map("tenant_id") @db.Uuid
   projectId    String    @map("project_id") @db.Uuid
@@ -2303,4 +2304,284 @@ model ReportJob {
   @@index([tenantId, requestedBy, createdAt])
   @@index([tenantId, projectId, status])
   @@map("report_jobs")
+}
+
+// M8: platform identities are independent of tenant memberships.
+enum PlatformRole {
+  SUPER_ADMIN
+  SUPPORT
+}
+
+enum PlatformUserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+  MANUAL
+}
+
+enum PlanStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+model PlatformUser {
+  id        String             @id @default(uuid()) @db.Uuid
+  userId    String             @unique @map("user_id") @db.Uuid
+  role      PlatformRole
+  status    PlatformUserStatus @default(ACTIVE)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("platform_users")
+}
+
+model PlatformSession {
+  id              String    @id @default(uuid()) @db.Uuid
+  platformUserId  String    @map("platform_user_id") @db.Uuid
+  tokenHash       String    @unique @map("token_hash")
+  expiresAt       DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(6)
+  authenticatedAt DateTime  @default(now()) @map("authenticated_at") @db.Timestamptz(6)
+
+  @@map("platform_sessions")
+}
+
+model SubscriptionPlan {
+  id           String        @id @default(uuid()) @db.Uuid
+  code         String        @unique @db.VarChar(50)
+  name         String        @db.VarChar(100)
+  description  String?
+  status       PlanStatus    @default(ACTIVE)
+  monthlyPrice Decimal?      @map("monthly_price") @db.Decimal(18, 2)
+  annualPrice  Decimal?      @map("annual_price") @db.Decimal(18, 2)
+  currency     String        @db.VarChar(3)
+  trialDays    Int           @default(14) @map("trial_days")
+  isPublic     Boolean       @default(true) @map("is_public")
+  version      Int           @default(1)
+  limits       PlanLimit[]
+  features     PlanFeature[]
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("subscription_plans")
+}
+
+model PlanLimit {
+  id         String           @id @default(uuid()) @db.Uuid
+  planId     String           @map("plan_id") @db.Uuid
+  plan       SubscriptionPlan @relation(fields: [planId], references: [id])
+  limitKey   String           @map("limit_key")
+  limitValue Int?             @map("limit_value")
+  unlimited  Boolean          @default(false)
+
+  @@unique([planId, limitKey])
+  @@map("plan_limits")
+}
+
+model Feature {
+  id          String        @id @default(uuid()) @db.Uuid
+  code        String        @unique
+  name        String
+  description String?
+  plans       PlanFeature[]
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("features")
+}
+
+model PlanFeature {
+  planId    String           @map("plan_id") @db.Uuid
+  featureId String           @map("feature_id") @db.Uuid
+  plan      SubscriptionPlan @relation(fields: [planId], references: [id])
+  feature   Feature          @relation(fields: [featureId], references: [id])
+  enabled   Boolean          @default(false)
+
+  @@id([planId, featureId])
+  @@map("plan_features")
+}
+
+model Subscription {
+  id                     String             @id @default(uuid()) @db.Uuid
+  tenantId               String             @unique @map("tenant_id") @db.Uuid
+  planId                 String             @map("plan_id") @db.Uuid
+  status                 SubscriptionStatus @default(TRIALING)
+  billingCycle           BillingCycle       @default(MANUAL) @map("billing_cycle")
+  trialStart             DateTime?          @map("trial_start") @db.Timestamptz(6)
+  trialEnd               DateTime?          @map("trial_end") @db.Timestamptz(6)
+  currentPeriodStart     DateTime           @map("current_period_start") @db.Timestamptz(6)
+  currentPeriodEnd       DateTime           @map("current_period_end") @db.Timestamptz(6)
+  cancelAtPeriodEnd      Boolean            @default(false) @map("cancel_at_period_end")
+  cancelledAt            DateTime?          @map("cancelled_at") @db.Timestamptz(6)
+  suspendedAt            DateTime?          @map("suspended_at") @db.Timestamptz(6)
+  externalCustomerId     String?            @map("external_customer_id")
+  externalSubscriptionId String?            @map("external_subscription_id")
+  version                Int                @default(1)
+  createdAt              DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, id])
+  @@index([status, trialEnd])
+  @@map("subscriptions")
+}
+
+model TenantUsage {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  usageKey     String   @map("usage_key")
+  periodStart  DateTime @map("period_start") @db.Date
+  periodEnd    DateTime @map("period_end") @db.Date
+  usedQuantity BigInt   @map("used_quantity")
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, usageKey, periodStart])
+  @@map("tenant_usage")
+}
+
+model TenantSetting {
+  tenantId              String    @id @map("tenant_id") @db.Uuid
+  defaultCurrency       String    @default("MZN") @map("default_currency")
+  timezone              String    @default("Africa/Maputo")
+  dateFormat            String    @default("dd/MM/yyyy") @map("date_format")
+  companyLogoDocumentId String?   @map("company_logo_document_id") @db.Uuid
+  supportEmail          String?   @map("support_email")
+  brandingPrimary       String?   @map("branding_primary")
+  closedAt              DateTime? @map("closed_at") @db.Timestamptz(6)
+  exportAllowed         Boolean   @default(true) @map("export_allowed")
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("tenant_settings")
+}
+
+model TenantStatusEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  fromStatus String   @map("from_status")
+  toStatus   String   @map("to_status")
+  reason     String
+  changedBy  String   @map("changed_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, createdAt])
+  @@map("tenant_status_events")
+}
+
+model PlatformAuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  platformUserId String?  @map("platform_user_id") @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid
+  action         String
+  entityType     String   @map("entity_type")
+  entityId       String?  @map("entity_id") @db.Uuid
+  oldValues      Json?    @map("old_values")
+  newValues      Json?    @map("new_values")
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([tenantId, createdAt])
+  @@map("platform_audit_logs")
+}
+
+model SupportSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  platformUserId String    @map("platform_user_id") @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  reason         String
+  authorizedBy   String    @map("authorized_by") @db.Uuid
+  status         String    @default("ACTIVE")
+  startedAt      DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(6)
+  endedAt        DateTime? @map("ended_at") @db.Timestamptz(6)
+
+  @@index([platformUserId, status, expiresAt])
+  @@map("support_sessions")
+}
+
+model FeatureFlag {
+  id                String   @id @default(uuid()) @db.Uuid
+  code              String   @unique
+  enabled           Boolean  @default(false)
+  description       String
+  rolloutPercentage Int?     @map("rollout_percentage")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("feature_flags")
+}
+
+model TenantFeatureOverride {
+  tenantId      String  @map("tenant_id") @db.Uuid
+  featureFlagId String  @map("feature_flag_id") @db.Uuid
+  enabled       Boolean
+
+  @@id([tenantId, featureFlagId])
+  @@map("tenant_feature_overrides")
+}
+
+model BillingInvoice {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  subscriptionId    String    @map("subscription_id") @db.Uuid
+  invoiceNumber     String    @unique @map("invoice_number")
+  periodStart       DateTime  @map("period_start") @db.Date
+  periodEnd         DateTime  @map("period_end") @db.Date
+  subtotal          Decimal   @db.Decimal(18, 2)
+  taxAmount         Decimal   @map("tax_amount") @db.Decimal(18, 2)
+  totalAmount       Decimal   @map("total_amount") @db.Decimal(18, 2)
+  currency          String    @db.VarChar(3)
+  status            String    @default("DRAFT")
+  dueDate           DateTime? @map("due_date") @db.Date
+  paidAt            DateTime? @map("paid_at") @db.Timestamptz(6)
+  externalInvoiceId String?   @map("external_invoice_id")
+  idempotencyKey    String    @map("idempotency_key")
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, createdAt])
+  @@map("billing_invoices")
+}
+
+model DataExportJob {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  status      String    @default("QUEUED")
+  requestedBy String    @map("requested_by") @db.Uuid
+  objectKey   String?   @map("object_key")
+  errorCode   String?   @map("error_code")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  startedAt   DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
+
+  @@index([tenantId, createdAt])
+  @@map("data_export_jobs")
+}
+
+model UserLegalAcceptance {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  tenantId     String?  @map("tenant_id") @db.Uuid
+  documentType String   @map("document_type")
+  version      String
+  acceptedAt   DateTime @default(now()) @map("accepted_at") @db.Timestamptz(6)
+  ipAddress    String?  @map("ip_address")
+
+  @@unique([userId, tenantId, documentType, version])
+  @@map("user_legal_acceptances")
 }

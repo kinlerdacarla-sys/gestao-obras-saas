@@ -42,6 +42,14 @@ export class SessionGuard implements CanActivate {
       ])
     )
       return true;
+    // Separate platform guards authenticate opaque platform sessions; tenant cookies never qualify.
+    if (
+      this.reflector.getAllAndOverride<boolean>("platformRoute", [
+        context.getHandler(),
+        context.getClass(),
+      ])
+    )
+      return true;
     let claims;
     try {
       claims = await verifyAccess(

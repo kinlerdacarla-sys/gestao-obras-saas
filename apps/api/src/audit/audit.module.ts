@@ -23,7 +23,7 @@ export function recordAudit(
   tx: Prisma.TransactionClient,
   ctx: { tenantId: string; userId: string | null },
   event: AuditEvent,
-  req?: ApiRequest,
+  req?: Pick<ApiRequest, "ip" | "get">,
 ) {
   const json = (value: unknown): Prisma.InputJsonValue | undefined =>
     value === undefined

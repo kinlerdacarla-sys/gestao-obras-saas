@@ -255,6 +255,14 @@ export class AuthService {
         where: { userId: reset.userId },
         data: { revokedAt: new Date() },
       });
+      const platformUser = await tx.platformUser.findUnique({
+        where: { userId: reset.userId },
+      });
+      if (platformUser)
+        await tx.platformSession.updateMany({
+          where: { platformUserId: platformUser.id, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
       await recordAudit(
         tx,
         { tenantId: reset.tenantId, userId: reset.userId },

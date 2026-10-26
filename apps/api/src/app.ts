@@ -1,3 +1,5 @@
+import { requestTelemetry } from "./saas/observability.js";
+import { SaasModule } from "./saas/saas.module.js";
 import { completeIntelligenceDocs } from "./analytics/docs.js";
 import { ReportModule } from "./report/report.module.js";
 import { NotificationCenterModule } from "./notification/center.module.js";
@@ -47,6 +49,7 @@ import { completeExecutionDocs } from "./schedule/docs.js";
 @Module({
   imports: [
     PlatformModule,
+    SaasModule,
     AnalyticsModule,
     ReportModule,
     AlertModule,
@@ -80,6 +83,7 @@ export async function createApp() {
     logger:
       configuration().NODE_ENV === "test" ? false : ["error", "warn", "log"],
   });
+  app.use(requestTelemetry);
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({ origin: configuration().WEB_ORIGIN, credentials: true });
