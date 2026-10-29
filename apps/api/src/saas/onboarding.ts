@@ -1,3 +1,4 @@
+import { encryptInvitation } from "./invitations.js";
 import { Injectable, Inject } from "@nestjs/common";
 import { z } from "zod";
 import { Database, Cache, fail } from "../platform.js";
@@ -107,12 +108,24 @@ export class OnboardingService {
           dateFormat: input.dateFormat,
         },
       });
-      await tx.passwordReset.create({
+      const reset = await tx.passwordReset.create({
         data: {
           tenantId: tenant.id,
           userId: user.id,
           tokenHash: tokenHash(token),
           expiresAt: new Date(now.getTime() + 86400000),
+        },
+      });
+      await tx.notificationPreference.create({
+        data: { tenantId: tenant.id, userId: user.id },
+      });
+      await tx.invitationDelivery.create({
+        data: {
+          tenantId: tenant.id,
+          userId: user.id,
+          resetId: reset.id,
+          ciphertext: encryptInvitation(token),
+          expiresAt: reset.expiresAt,
         },
       });
       // Acceptance is recorded by the invited administrator after verifying their email,
@@ -144,16 +157,6 @@ export class OnboardingService {
       });
       return { tenantId: tenant.id, slug: tenant.slug, trialEnd };
     });
-    try {
-      await this.mail.deliverReset(input.admin.email, token);
-    } catch {
-      return {
-        ...result,
-        invitation: "DELIVERY_FAILED",
-        message:
-          "Empresa criada; utilize a recuperação de acesso para reenviar o convite.",
-      };
-    }
-    return { ...result, invitation: "SENT" };
+    return { ...result, invitation: "QUEUED" };
   }
 }

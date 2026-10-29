@@ -1,3 +1,4 @@
+import { createTestTenant } from "../helpers/tenant.js";
 import { budgetFixture } from "../helpers/budget-fixtures.js";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import request from "supertest";
@@ -46,10 +47,14 @@ describe("M2 budgets with real PostgreSQL/Redis/worker", () => {
     server = app.getHttpServer() as Server;
     await app.get(Cache).del("auth:ip:127.0.0.1", "auth:ip:::ffff:127.0.0.1");
     a = (
-      await db.tenant.create({ data: { name: "M2 A", slug: `m2-${suffix}` } })
+      await createTestTenant(db, {
+        data: { name: "M2 A", slug: `m2-${suffix}` },
+      })
     ).id;
     b = (
-      await db.tenant.create({ data: { name: "M2 B", slug: `m2b-${suffix}` } })
+      await createTestTenant(db, {
+        data: { name: "M2 B", slug: `m2b-${suffix}` },
+      })
     ).id;
     const user = await db.user.create({
       data: {

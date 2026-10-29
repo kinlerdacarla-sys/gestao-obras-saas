@@ -1,8 +1,9 @@
+import { QuotaService } from "../saas/entitlements.js";
 import { HttpException } from "@nestjs/common";
 import { Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
 import { Queue } from "bullmq";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import type { z } from "zod";
 import { Database, fail } from "../platform.js";
@@ -23,6 +24,7 @@ export class ReportService implements OnModuleDestroy {
   });
   constructor(
     @Inject(Database) readonly db: Database,
+    @Inject(QuotaService) readonly quota: QuotaService,
     @Inject(AnalyticsAccess) readonly access: AnalyticsAccess,
     @Inject(ReportDataService) readonly data: ReportDataService,
   ) {}
@@ -30,6 +32,11 @@ export class ReportService implements OnModuleDestroy {
     await this.queue.close();
   }
   async authorize(r: ApiRequest, p: string | null | undefined, type: string) {
+    if (type !== "PROJECT_PROGRESS")
+      await this.quota.entitlements.assertFeature(
+        r.auth.tenantId,
+        "ADVANCED_REPORTS",
+      );
     const role = p
       ? (await this.access.execution.check(r, p)).role
       : r.auth.role;
@@ -55,10 +62,54 @@ export class ReportService implements OnModuleDestroy {
   }
   async request(r: ApiRequest, input: z.infer<typeof reportRequest>) {
     const role = await this.authorize(r, input.projectId, input.reportType);
+    let enqueue = true;
     const job = await this.db.$transaction(async (tx) => {
+      await this.quota.lock(tx, r.auth.tenantId);
+      if (input.requestKey) {
+        const existing = await tx.reportJob.findFirst({
+          where: {
+            tenantId: r.auth.tenantId,
+            requestedBy: r.auth.userId,
+            requestKey: input.requestKey,
+          },
+        });
+        if (existing) {
+          const parameters = existing.parameters as {
+            date_from?: string;
+            date_to?: string;
+          };
+          if (
+            existing.reportType !== input.reportType ||
+            existing.format !== input.format ||
+            existing.projectId !== (input.projectId ?? null) ||
+            parameters.date_from !== input.parameters.date_from ||
+            parameters.date_to !== input.parameters.date_to
+          )
+            fail(
+              409,
+              "IDEMPOTENCY_CONFLICT",
+              "Pedido já utilizado com outros parâmetros",
+            );
+          if (existing.errorMessage === "REPORT_QUEUE_UNAVAILABLE") {
+            await this.quota.assertCanConsume(
+              tx,
+              r.auth.tenantId,
+              "MONTHLY_REPORTS",
+            );
+            return tx.reportJob.update({
+              where: { id: existing.id },
+              data: { status: "QUEUED", errorMessage: null },
+            });
+          }
+          enqueue = false;
+          return existing;
+        }
+      }
+      await this.quota.assertCanConsume(tx, r.auth.tenantId, "MONTHLY_REPORTS");
       const row = await tx.reportJob.create({
         data: {
           tenantId: r.auth.tenantId,
+          requestKey: input.requestKey,
           projectId: input.projectId,
           reportType: input.reportType,
           format: input.format,
@@ -81,6 +132,7 @@ export class ReportService implements OnModuleDestroy {
       );
       return row;
     });
+    if (!enqueue) return this.dto(job);
     try {
       await this.queue.add(
         "generate",
@@ -97,6 +149,7 @@ export class ReportService implements OnModuleDestroy {
       await this.failed(job, "REPORT_QUEUE_UNAVAILABLE");
       fail(503, "REPORT_QUEUE_UNAVAILABLE", "Fila de relatórios indisponível");
     }
+    await this.quota.recordUsage(r.auth.tenantId);
     return this.dto(job);
   }
   async failed(job: ReportJob, code: string) {
@@ -151,6 +204,7 @@ export class ReportService implements OnModuleDestroy {
   async process(id: string) {
     const job = await this.db.reportJob.findUniqueOrThrow({ where: { id } });
     if (job.status === "COMPLETED" || job.status === "EXPIRED") return;
+    let outputFile: string | undefined;
     try {
       if (job.expiresAt.getTime() < Date.now()) {
         await this.db.reportJob.update({
@@ -205,13 +259,21 @@ export class ReportService implements OnModuleDestroy {
         );
       const objectKey = `tenant/${job.tenantId}/reports/${new Date().getUTCFullYear()}/${job.id}/report.${job.format.toLowerCase()}`;
       const file = this.file(objectKey);
+      outputFile = file;
       await mkdir(path.dirname(file), { recursive: true });
-      await writeFile(file, bytes);
       await this.db.$transaction(async (tx) => {
+        await this.quota.assertCanConsume(
+          tx,
+          job.tenantId,
+          "STORAGE_GB",
+          BigInt(bytes.length),
+        );
+        await writeFile(file, bytes);
         await tx.reportJob.update({
           where: { id },
           data: {
             status: "COMPLETED",
+            sizeBytes: BigInt(bytes.length),
             completedAt: new Date(),
             objectKey,
             parameters: { ...parameters, signature },
@@ -232,6 +294,7 @@ export class ReportService implements OnModuleDestroy {
           });
       });
     } catch (error) {
+      if (outputFile) await unlink(outputFile).catch(() => {});
       await this.failed(job, "REPORT_GENERATION_FAILED");
       throw error;
     }

@@ -1,3 +1,4 @@
+import { createTestTenant } from "../helpers/tenant.js";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import request from "supertest";
 import { randomUUID, createHash } from "node:crypto";
@@ -82,10 +83,10 @@ describe("M5 financial with PostgreSQL and Redis", () => {
     server = app.getHttpServer() as Server;
     await app.get(Cache).del("auth:ip:127.0.0.1", "auth:ip:::ffff:127.0.0.1");
     tenant = (
-      await db.tenant.create({ data: { name: "M3", slug: `m5-${suffix}` } })
+      await createTestTenant(db, { data: { name: "M3", slug: `m5-${suffix}` } })
     ).id;
     foreign = (
-      await db.tenant.create({
+      await createTestTenant(db, {
         data: { name: "M3 foreign", slug: `m5-b-${suffix}` },
       })
     ).id;

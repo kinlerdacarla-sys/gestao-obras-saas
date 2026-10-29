@@ -21,6 +21,16 @@ export class ExecutionAccess {
       },
     });
     const role = req.auth.role === "ADMIN" ? "ADMIN" : member!.role;
+    if (role === "CLIENT")
+      await this.projects.quota.entitlements.assertFeature(
+        req.auth.tenantId,
+        "CLIENT_PORTAL",
+      );
+    if (role === "FINANCIER")
+      await this.projects.quota.entitlements.assertFeature(
+        req.auth.tenantId,
+        "FINANCIER_PORTAL",
+      );
     const editor = canEditProject(req.auth.role, member?.role);
     if (write && !editor)
       fail(403, "ACCESS_DENIED", "Sem permissão para editar esta obra");

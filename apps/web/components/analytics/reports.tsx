@@ -34,10 +34,14 @@ export function Reports() {
       }[]
     >([]),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [advanced, setAdvanced] = useState(false);
   const load = () =>
     api<{ items: typeof items }>("/reports").then((x) => setItems(x.items));
   useEffect(() => {
+    api<{ features: string[] }>("/entitlements")
+      .then((v) => setAdvanced(v.features.includes("ADVANCED_REPORTS")))
+      .catch((e) => setError(e.message));
     api<typeof projects>("/projects")
       .then((x) => {
         setProjects(x);
@@ -96,7 +100,7 @@ export function Reports() {
       setError((e as Error).message);
     }
   }
-  const allowed =
+  const roleAllowed =
     me.role === "ADMIN"
       ? Object.keys(names)
       : me.role === "MANAGER"
@@ -113,6 +117,9 @@ export function Reports() {
                 "FUNDING",
               ]
             : ["PROJECT_EXECUTIVE", "PROJECT_PROGRESS", "QUALITY"];
+  const allowed = advanced
+    ? roleAllowed
+    : roleAllowed.filter((v) => v === "PROJECT_PROGRESS");
   return (
     <>
       <h1>Relatórios</h1>

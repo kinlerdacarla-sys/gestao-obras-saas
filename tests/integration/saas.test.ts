@@ -1,3 +1,4 @@
+import { InvitationService } from "../../apps/api/src/saas/invitations.js";
 import { OnboardingService } from "../../apps/api/src/saas/onboarding.js";
 import { NotificationService } from "../../apps/api/src/notification/notification.module.js";
 import { ManualBillingProvider } from "../../apps/api/src/saas/billing.js";
@@ -214,7 +215,12 @@ describe("M8 isolated commercial foundations", () => {
         ip: "192.0.2.85",
         get: () => "integration",
       } as unknown as Request);
-      expect(result.invitation).toBe("SENT");
+      expect(result.invitation).toBe("QUEUED");
+      const deliveryJob = await db.invitationDelivery.findFirstOrThrow({
+        where: { tenantId: result.tenantId },
+      });
+      expect(deliveryJob.ciphertext).not.toMatch(/^[a-f0-9]{64}$/);
+      await new InvitationService(db, mail).process(deliveryJob.id);
       expect(JSON.stringify(result)).not.toContain(invitation);
       expect(invitation).toMatch(/^[a-f0-9]{64}$/);
       expect(

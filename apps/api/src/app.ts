@@ -83,6 +83,16 @@ export async function createApp() {
     logger:
       configuration().NODE_ENV === "test" ? false : ["error", "warn", "log"],
   });
+  const config = configuration();
+  app
+    .getHttpAdapter()
+    .getInstance()
+    .set(
+      "trust proxy",
+      config.TRUST_PROXY === "false"
+        ? false
+        : config.TRUST_PROXY.split(",").map((v) => v.trim()),
+    );
   app.use(requestTelemetry);
   app.use(helmet());
   app.use(cookieParser());

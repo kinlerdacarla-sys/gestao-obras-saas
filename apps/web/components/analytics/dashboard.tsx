@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, Notice } from "@obras/ui";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { useMe } from "../shell";
 type Values = Record<string, string | number | null | boolean>;
 export type Executive = {
@@ -112,7 +112,8 @@ export function ExecutiveDashboard() {
     [error, setError] = useState(""),
     [filter, setFilter] = useState("all"),
     [query, setQuery] = useState(""),
-    [catalog, setCatalog] = useState<Executive[]>([]);
+    [catalog, setCatalog] = useState<Executive[]>([]),
+    [locked, setLocked] = useState(false);
   useEffect(() => {
     let active = true;
     setData(undefined);
@@ -126,12 +127,34 @@ export function ExecutiveDashboard() {
         }
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) {
+          if (e instanceof ApiError && e.code === "FEATURE_NOT_AVAILABLE")
+            setLocked(true);
+          else setError(e.message);
+        }
       });
     return () => {
       active = false;
     };
   }, [filter, query]);
+  if (locked)
+    return (
+      <>
+        <h1>Dashboard</h1>
+        <section className="card">
+          <h2>As suas obras</h2>
+          <p>Comece por criar uma obra ou consultar as obras existentes.</p>
+          <Link className="button" href="/projects">
+            Abrir obras
+          </Link>
+        </section>
+        <section className="card">
+          <h2>Analytics de portfólio</h2>
+          <p>Esta funcionalidade exige um plano com analytics de portfólio.</p>
+          <Link href="/settings/subscription">Comparar planos</Link>
+        </section>
+      </>
+    );
   return (
     <>
       <div className="heading">

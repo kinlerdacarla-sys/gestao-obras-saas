@@ -1,3 +1,4 @@
+import { QuotaService } from "../saas/entitlements.js";
 import { Inject, Injectable } from "@nestjs/common";
 import type { z } from "zod";
 import { Database, fail, notFound } from "../platform.js";
@@ -17,6 +18,7 @@ import type { Prisma } from "../generated/prisma/client.js";
 export class ProjectService {
   constructor(
     @Inject(Database) private readonly db: Database,
+    @Inject(QuotaService) readonly quota: QuotaService,
     @Inject(TenantScope) private readonly scope: TenantScope,
   ) {}
   private visible(req: ApiRequest): Prisma.ProjectWhereInput {
@@ -76,6 +78,12 @@ export class ProjectService {
     const dates = this.dates(input);
     this.validateDates(dates.startDate, dates.plannedEndDate);
     return this.db.$transaction(async (tx) => {
+      if (!["COMPLETED", "CANCELLED"].includes(input.status ?? "PLANNING"))
+        await this.quota.assertCanConsume(
+          tx,
+          req.auth.tenantId,
+          "ACTIVE_PROJECTS",
+        );
       const result = await tx.project.create({
         data: {
           ...input,
@@ -135,6 +143,18 @@ export class ProjectService {
         : dates.plannedEndDate,
     );
     return this.db.$transaction(async (tx) => {
+      await this.quota.lock(tx, req.auth.tenantId);
+      const current = await tx.project.findUniqueOrThrow({ where: { id } });
+      if (
+        input.status &&
+        !["COMPLETED", "CANCELLED"].includes(input.status) &&
+        ["COMPLETED", "CANCELLED"].includes(current.status)
+      )
+        await this.quota.assertCanConsume(
+          tx,
+          req.auth.tenantId,
+          "ACTIVE_PROJECTS",
+        );
       const result = await tx.project.update({
         where: { tenantId_id: this.scope.resource(req.auth, id) },
         data: { ...dates, updatedBy: req.auth.userId },

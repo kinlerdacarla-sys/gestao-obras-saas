@@ -1,3 +1,4 @@
+import { effectiveSubscriptionStatus } from "../../../../packages/domain/src/saas.js";
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { Database, fail } from "../platform.js";
@@ -77,7 +78,11 @@ export class StorageUsageService {
       },
       _sum: { sizeBytes: true },
     });
-    return result._sum.sizeBytes ?? 0n;
+    const reports = await tx.reportJob.aggregate({
+      where: { tenantId, objectKey: { not: null } },
+      _sum: { sizeBytes: true },
+    });
+    return (result._sum.sizeBytes ?? 0n) + (reports._sum.sizeBytes ?? 0n);
   }
 }
 @Injectable()
@@ -118,7 +123,10 @@ export class QuotaService {
         where: {
           tenantId,
           createdAt: { gte: start, lt: end },
-          status: { in: ["QUEUED", "PROCESSING", "COMPLETED"] },
+          OR: [
+            { errorMessage: null },
+            { errorMessage: { not: "REPORT_QUEUE_UNAVAILABLE" } },
+          ],
         },
       }),
       tx.tenantUsage.findUnique({
@@ -146,6 +154,18 @@ export class QuotaService {
     quantity = 1n,
   ) {
     await this.lock(tx, tenantId);
+    const tenant = await tx.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+    });
+    const { subscription } = await this.entitlements.getTenantEntitlements(
+      tenantId,
+      tx,
+    );
+    const state = effectiveSubscriptionStatus(subscription);
+    if (tenant.status !== "ACTIVE" || state === "SUSPENDED")
+      fail(403, "SUBSCRIPTION_SUSPENDED", "Empresa suspensa");
+    if (!["ACTIVE", "TRIALING"].includes(state))
+      fail(403, "SUBSCRIPTION_READ_ONLY", "Subscrição em modo de leitura");
     const limit = await this.getLimit(tenantId, key, tx);
     const usage = await this.getUsage(tenantId, tx);
     assertQuota(limit, usage[key], quantity);

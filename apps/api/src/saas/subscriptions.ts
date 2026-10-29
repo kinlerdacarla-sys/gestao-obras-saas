@@ -127,6 +127,7 @@ export class SubscriptionService {
     tenantId: string,
     status: "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELLED",
     version: number,
+    actor: { platformUserId: string; reason: string },
   ) {
     return this.db.$transaction(async (tx) => {
       await this.quota.lock(tx, tenantId);
@@ -137,7 +138,7 @@ export class SubscriptionService {
         fail(409, "VERSION_CONFLICT", "Subscrição alterada");
       assertSubscriptionTransition(effectiveSubscriptionStatus(before), status);
       const now = new Date();
-      return tx.subscription.update({
+      const result = await tx.subscription.update({
         where: { id: before.id },
         data: {
           status,
@@ -153,6 +154,18 @@ export class SubscriptionService {
           ...(status === "CANCELLED" ? { cancelledAt: now } : {}),
         },
       });
+      await tx.platformAuditLog.create({
+        data: {
+          platformUserId: actor.platformUserId,
+          tenantId,
+          action: "SUBSCRIPTION_STATUS_CHANGED",
+          entityType: "Subscription",
+          entityId: before.id,
+          oldValues: { status: before.status },
+          newValues: { status, reason: actor.reason },
+        },
+      });
+      return result;
     });
   }
 }

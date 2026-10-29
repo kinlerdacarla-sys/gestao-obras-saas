@@ -125,6 +125,7 @@ export function Login({
           >
             {mode === "login" ? "Esqueceu-se da password?" : "Voltar ao login"}
           </Link>
+          {mode === "login" && <Link className="text-link" href="/signup">Criar empresa</Link>}
         </form>
       </main>
     </div>

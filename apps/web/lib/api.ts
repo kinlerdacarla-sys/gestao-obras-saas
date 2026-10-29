@@ -1,3 +1,6 @@
+export class ApiError extends Error {
+  constructor(message: string, readonly code: string, readonly details?: unknown) { super(message); }
+}
 let refreshing: Promise<Response> | undefined;
 export async function api<T>(
   path: string,
@@ -34,7 +37,7 @@ export async function api<T>(
   }
   const data = await response.json();
   if (!response.ok)
-    throw new Error(data.message ?? "Não foi possível concluir a operação");
+    throw new ApiError(data.message ?? "Não foi possível concluir a operação", data.code, data.details);
   return data as T;
 }
 export const send = (method: string, data?: unknown): RequestInit => ({

@@ -39,6 +39,8 @@ jobs:
       - run: npm ci
       - run: npm run generate
       - run: npm run migrate
+      - run: npx prisma migrate status
+      - run: npx prisma validate
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
@@ -77,3 +79,18 @@ jobs:
       - name: Remove isolated CI stack
         if: always()
         run: docker compose --profile validation down -v
+
+  production-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build immutable non-root runtime images
+        run: |
+          docker build --target production-api -t obras-api:${{ github.sha }} -f infrastructure/docker/Dockerfile .
+          docker build --target production-worker -t obras-worker:${{ github.sha }} -f infrastructure/docker/Dockerfile .
+          docker build --target production-web -t obras-web:${{ github.sha }} -f infrastructure/docker/Dockerfile .
+          test "$(docker inspect -f '{{.Config.User}}' obras-api:${{ github.sha }})" = node
+          test "$(docker inspect -f '{{.Config.User}}' obras-worker:${{ github.sha }})" = node
+          test "$(docker inspect -f '{{.Config.User}}' obras-web:${{ github.sha }})" = node
+          docker run --rm obras-api:${{ github.sha }} node -e "if(require('fs').existsSync('/app/node_modules/typescript')) process.exit(1)"

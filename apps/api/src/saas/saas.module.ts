@@ -1,3 +1,9 @@
+import { DataExportService, DataExportController } from "./exports.js";
+import { SignupController, TenantSaasController } from "./tenant-api.js";
+import { OnboardingService } from "./onboarding.js";
+import { InvitationService } from "./invitations.js";
+import { NotificationModule } from "../notification/notification.module.js";
+import { CommercialPolicy } from "./policy.js";
 import { httpMetrics } from "./observability.js";
 import {
   Body,
@@ -79,6 +85,7 @@ class PlatformController {
     @Inject(Database) readonly db: Database,
     @Inject(PlatformAuthService) readonly auth: PlatformAuthService,
     @Inject(QuotaService) readonly quota: QuotaService,
+    @Inject(SubscriptionService) readonly subscriptions: SubscriptionService,
   ) {}
   @Get("me") me(@Req() r: PlatformRequest) {
     return { role: r.platform.role, id: r.platform.id };
@@ -198,6 +205,22 @@ class PlatformController {
       subscription: await this.db.subscription.findUnique({
         where: { tenantId: id },
       }),
+      users: await this.db.tenantUser.findMany({
+        where: { tenantId: id },
+        take: 100,
+        select: {
+          role: true,
+          status: true,
+          user: { select: { id: true, name: true, email: true } },
+        },
+      }),
+      projects: await this.db.project.findMany({
+        where: { tenantId: id },
+        take: 100,
+        select: { id: true, name: true, code: true, status: true },
+      }),
+      limits: (await this.quota.entitlements.getTenantEntitlements(id)).plan
+        .limits,
       audit: await this.db.platformAuditLog.findMany({
         where: { tenantId: id },
         orderBy: { createdAt: "desc" },
@@ -278,6 +301,25 @@ class PlatformController {
   ) {
     return this.status(r, z.uuid().parse(id), b, "CLOSED");
   }
+  @Post("tenants/:id/subscription/status") subscriptionStatus(
+    @Req() r: PlatformRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    this.auth.superAdmin(r, true);
+    const input = reasonInput
+      .extend({
+        status: z.enum(["ACTIVE", "PAST_DUE", "SUSPENDED", "CANCELLED"]),
+        version: z.number().int().positive(),
+      })
+      .parse(body);
+    return this.subscriptions.transition(
+      z.uuid().parse(id),
+      input.status,
+      input.version,
+      { platformUserId: r.platform.id, reason: input.reason },
+    );
+  }
   @Get("plans") async plans(@Req() r: PlatformRequest) {
     this.auth.superAdmin(r);
     return this.db.subscriptionPlan.findMany({
@@ -290,6 +332,40 @@ class PlatformController {
       orderBy: { createdAt: "desc" },
       take: 100,
     });
+  }
+  @Get("support-sessions") async supportList(@Req() r: PlatformRequest) {
+    const rows = await this.db.supportSession.findMany({
+      where: {
+        platformUserId: r.platform.id,
+        status: "ACTIVE",
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { startedAt: "desc" },
+      take: 50,
+    });
+    const tenants = await this.db.tenant.findMany({
+      where: { id: { in: rows.map((x) => x.tenantId) } },
+      select: { id: true, name: true },
+    });
+    return rows.map((x) => ({
+      ...x,
+      tenantName: tenants.find((t) => t.id === x.tenantId)?.name,
+    }));
+  }
+  @Get("operators") async operators(@Req() r: PlatformRequest) {
+    this.auth.superAdmin(r);
+    const operators = await this.db.platformUser.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, userId: true, role: true },
+    });
+    const users = await this.db.user.findMany({
+      where: { id: { in: operators.map((x) => x.userId) } },
+      select: { id: true, name: true, email: true },
+    });
+    return operators.map((x) => ({
+      ...x,
+      user: users.find((u) => u.id === x.userId),
+    }));
   }
   @Post("support-sessions")
   @RequestDoc(supportInput)
@@ -389,8 +465,19 @@ class PlatformController {
 }
 @Global()
 @Module({
-  controllers: [PlatformLoginController, PlatformController],
+  imports: [NotificationModule],
+  controllers: [
+    DataExportController,
+    PlatformLoginController,
+    PlatformController,
+    SignupController,
+    TenantSaasController,
+  ],
   providers: [
+    DataExportService,
+    OnboardingService,
+    InvitationService,
+    CommercialPolicy,
     EntitlementService,
     StorageUsageService,
     QuotaService,
@@ -400,6 +487,9 @@ class PlatformController {
     PlatformGuard,
   ],
   exports: [
+    DataExportService,
+    InvitationService,
+    CommercialPolicy,
     EntitlementService,
     StorageUsageService,
     QuotaService,

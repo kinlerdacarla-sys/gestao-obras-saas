@@ -1,3 +1,4 @@
+import { createTestTenant } from "../helpers/tenant.js";
 import { seedBudget } from "../../prisma/seed-budget.js";
 import { seedExecution } from "../../prisma/seed-execution.js";
 import { AnalyticsService } from "../../apps/api/src/analytics/analytics.service.js";
@@ -43,12 +44,12 @@ describe("M7 analytics authorization and aggregation", () => {
     server = app.getHttpServer() as Server;
     await app.get(Cache).del("auth:ip:127.0.0.1", "auth:ip:::ffff:127.0.0.1");
     tenant = (
-      await db.tenant.create({
+      await createTestTenant(db, {
         data: { name: "Similar tenant", slug: `m7-${suffix}` },
       })
     ).id;
     const foreign = (
-      await db.tenant.create({
+      await createTestTenant(db, {
         data: { name: "Similar tenant", slug: `m7-b-${suffix}` },
       })
     ).id;

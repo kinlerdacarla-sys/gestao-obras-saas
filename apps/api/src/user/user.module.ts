@@ -1,3 +1,5 @@
+import { encryptInvitation } from "../saas/invitations.js";
+import { QuotaService } from "../saas/entitlements.js";
 import {
   Body,
   Controller,
@@ -31,6 +33,7 @@ const publicUser = { id: true, name: true, email: true, status: true } as const;
 export class UserService {
   constructor(
     @Inject(Database) private readonly db: Database,
+    @Inject(QuotaService) readonly quota: QuotaService,
     @Inject(TenantScope) private readonly scope: TenantScope,
     @Inject(NotificationService)
     private readonly notifications: NotificationService,
@@ -66,6 +69,7 @@ export class UserService {
     const passwordHash = await hashPassword(opaqueToken());
     const token = opaqueToken();
     const user = await this.db.$transaction(async (tx) => {
+      await this.quota.assertCanConsume(tx, req.auth.tenantId, "USERS");
       const user = await tx.user.create({
         data: { email: input.email, name: input.name, passwordHash },
         select: publicUser,
@@ -77,12 +81,21 @@ export class UserService {
           role: input.role,
         },
       });
-      await tx.passwordReset.create({
+      const reset = await tx.passwordReset.create({
         data: {
           ...this.scope.where(req.auth),
           userId: user.id,
           tokenHash: tokenHash(token),
           expiresAt: new Date(Date.now() + 86400000),
+        },
+      });
+      await tx.invitationDelivery.create({
+        data: {
+          tenantId: req.auth.tenantId,
+          userId: user.id,
+          resetId: reset.id,
+          ciphertext: encryptInvitation(token),
+          expiresAt: reset.expiresAt,
         },
       });
       await recordAudit(
@@ -98,7 +111,7 @@ export class UserService {
       );
       return user;
     });
-    await this.notifications.deliverReset(user.email, token);
+
     return user;
   }
   async patch(

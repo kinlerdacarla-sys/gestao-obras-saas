@@ -1,6 +1,7 @@
 import { z } from "zod";
 export const reportRequest = z
   .object({
+    requestKey: z.uuid().optional(),
     projectId: z.uuid().optional(),
     reportType: z.enum([
       "PROJECT_EXECUTIVE",

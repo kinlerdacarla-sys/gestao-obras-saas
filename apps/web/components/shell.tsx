@@ -1,11 +1,14 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { OnboardingChecklist } from "./onboarding-checklist";
 import { api, send, type Me } from "../lib/api";
 import { Notice } from "@obras/ui";
 const Context = createContext<Me | null>(null);
 export const useMe = () => useContext(Context)!;
 export function Shell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [me, setMe] = useState<Me | null>(null),
     [error, setError] = useState(""),
     [open, setOpen] = useState(false);
@@ -71,6 +74,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {me.role === "ADMIN" && (
               <>
                 <small>CONFIGURAÇÕES</small>
+                <Link href="/settings/subscription">Subscrição</Link>
+                <Link href="/settings/billing">Faturação</Link>
+                <Link href="/settings/data-exports">Exportar dados</Link>
                 <Link href="/settings/users">Utilizadores</Link>
                 <Link href="/settings/alerts">Alertas e notificações</Link>
                 <Link href="/settings/organizations">Organizações</Link>
@@ -94,6 +100,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           {error && <Notice error>{error}</Notice>}
+          {me.role === "ADMIN" && pathname === "/dashboard" && <OnboardingChecklist />}
           {children}
         </main>
       </div>

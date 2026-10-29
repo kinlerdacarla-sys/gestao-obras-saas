@@ -262,3 +262,11 @@ docker compose --profile validation run --rm tests
 O perfil executa migrations, lint, typecheck, testes unitários, integração, seed, build de produção e E2E com Chromium. Usa PostgreSQL/Redis isolados e volume documental próprio. Para repetir a partir de base vazia, recriar apenas `postgres-test` e `redis-test` com `--force-recreate`; não fazê-lo durante testes em execução. A CI executa estas verificações e smoke test Compose; não faz deploy.
 
 Evidências e limites da validação M7: [relatório de validação](docs/validation-m7.md).
+
+## M8 — SaaS e operação
+
+Registo público em `/signup`; subscrição, faturação manual e exportação em `/settings/subscription`, `/settings/billing` e `/settings/data-exports`. Administração separada em `/platform/login`; o administrador de demonstração não é operador de plataforma.
+
+A API aplica quotas e direitos comerciais independentemente da interface. Novos tenants começam com trial explícito; contas anteriores recebem a transição documentada. O convite inicial é processado pelo worker, com token cifrado no outbox e uso único. Em desenvolvimento, emails são ficheiros EML privados no diretório `work/mail-outbox` do worker; em produção exige SMTP.
+
+Para staging/produção usar exclusivamente o [runbook de deployment](docs/deployment.md), o Compose de release e segredos próprios. Não executar seed demo em produção. Ver [estado M8](docs/implementation-m8.md), [quotas](docs/usage-limits.md), [onboarding](docs/onboarding.md), [suporte](docs/support-access.md), [backup/restore](docs/backup-restore.md) e [checklist de lançamento](docs/production-checklist.md).

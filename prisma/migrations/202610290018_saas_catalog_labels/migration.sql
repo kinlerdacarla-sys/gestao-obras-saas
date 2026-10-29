@@ -1,0 +1,1 @@
+UPDATE subscription_plans SET name = CASE code WHEN 'STARTER' THEN 'Starter' WHEN 'PROFESSIONAL' THEN 'Professional' WHEN 'ENTERPRISE' THEN 'Enterprise' ELSE name END WHERE code IN ('STARTER','PROFESSIONAL','ENTERPRISE') AND name=code;

@@ -1,3 +1,4 @@
+import { createTestTenant } from "../helpers/tenant.js";
 import { checkQualityCertification } from "../../apps/api/src/quality/measurement-block.js";
 import { beforeAll, afterAll, describe, it, expect } from "vitest";
 import request from "supertest";
@@ -91,10 +92,10 @@ describe("M6 quality PostgreSQL integration", () => {
     server = app.getHttpServer() as Server;
     await app.get(Cache).del("auth:ip:127.0.0.1", "auth:ip:::ffff:127.0.0.1");
     tenant = (
-      await db.tenant.create({ data: { name: "M6", slug: `m6-${suffix}` } })
+      await createTestTenant(db, { data: { name: "M6", slug: `m6-${suffix}` } })
     ).id;
     foreign = (
-      await db.tenant.create({
+      await createTestTenant(db, {
         data: { name: "Foreign", slug: `m6-other-${suffix}` },
       })
     ).id;

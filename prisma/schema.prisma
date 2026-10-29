@@ -2286,6 +2286,8 @@ model NotificationPreference {
 }
 
 model ReportJob {
+  requestKey   String?      @map("request_key") @db.Uuid
+  sizeBytes    BigInt       @default(0) @map("size_bytes")
   id           String       @id @default(uuid()) @db.Uuid
   tenantId     String       @map("tenant_id") @db.Uuid
   projectId    String?      @map("project_id") @db.Uuid
@@ -2301,6 +2303,7 @@ model ReportJob {
   completedAt  DateTime?    @map("completed_at") @db.Timestamptz(6)
   expiresAt    DateTime     @map("expires_at") @db.Timestamptz(6)
 
+  @@unique([tenantId, requestedBy, requestKey])
   @@index([tenantId, requestedBy, createdAt])
   @@index([tenantId, projectId, status])
   @@map("report_jobs")
@@ -2558,6 +2561,7 @@ model BillingInvoice {
 }
 
 model DataExportJob {
+  sizeBytes   BigInt    @default(0) @map("size_bytes")
   id          String    @id @default(uuid()) @db.Uuid
   tenantId    String    @map("tenant_id") @db.Uuid
   status      String    @default("QUEUED")
@@ -2584,4 +2588,19 @@ model UserLegalAcceptance {
 
   @@unique([userId, tenantId, documentType, version])
   @@map("user_legal_acceptances")
+}
+
+model InvitationDelivery {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  resetId    String    @unique @map("reset_id") @db.Uuid
+  ciphertext String?
+  sentAt     DateTime? @map("sent_at") @db.Timestamptz(6)
+  leaseUntil DateTime? @map("lease_until") @db.Timestamptz(6)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([sentAt, expiresAt])
+  @@map("invitation_deliveries")
 }

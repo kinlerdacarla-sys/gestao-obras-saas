@@ -1,3 +1,4 @@
+import { QuotaService } from "../saas/entitlements.js";
 import {
   Body,
   Controller,
@@ -84,6 +85,7 @@ export function fileSignature(bytes: Buffer, mime: string) {
 export class DocumentService {
   constructor(
     @Inject(Database) readonly db: Database,
+    @Inject(QuotaService) readonly quota: QuotaService,
     @Inject(ExecutionAccess) readonly access: ExecutionAccess,
   ) {}
   async authorize(
@@ -290,6 +292,12 @@ export class DocumentService {
     )
       fail(400, "VALIDATION_ERROR", "Formato de ficheiro inválido");
     return this.db.$transaction(async (tx) => {
+      await this.quota.assertCanConsume(
+        tx,
+        req.auth.tenantId,
+        "STORAGE_GB",
+        BigInt(input.sizeBytes),
+      );
       const log = await this.claimOwner(
         tx,
         scope,
@@ -558,6 +566,12 @@ export class DocumentService {
   ) {
     const { scope } = await this.authorize(req, projectId, owner, true);
     return this.db.$transaction(async (tx) => {
+      await this.quota.assertCanConsume(
+        tx,
+        req.auth.tenantId,
+        "STORAGE_GB",
+        0n,
+      );
       await this.claimOwner(tx, scope, logId, version, owner, req.auth.userId);
       const document =
         (await tx.document.findFirst({

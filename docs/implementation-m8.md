@@ -1,72 +1,29 @@
-# M8 — estado de implementação
+# M8 — completion pass
 
-Atualizado em 2026-10-26. **M8 em desenvolvimento; não concluído e não pronto para M9.**
+Atualizado em 2026-10-29. Completion pass implementada e validada localmente. A aprovação de release exige também o CI verde do SHA exato, consultável no GitHub Actions.
 
-## Base validada
+## Implementado
 
-M7 no commit `0904b47064a9ba5f942af9859c838680e7adfb96`, sem alterações locais no início.
-A regressão inicial em Docker (`work/m8-baseline.txt`) passou migrations (14), lint,
-typecheck, 180 testes unitários, 191 de integração, 18 E2E e build.
-CI desse commit: https://github.com/kinlerdacarla-sys/gestao-obras-saas/actions/runs/39757518027
+- Quotas reais: criação/reativação de obras, convites, reservas e confirmação de uploads, aceitação idempotente de relatórios. Locks transacionais por tenant e revalidação de estado; snapshots de uso e reconciliação periódica.
+- Guard central de subscrição, acesso limitado de leitura para suspensão/expiração/inadimplência, preservando autenticação, gestão e portabilidade. Entitlements de relatórios, portfólio, portais e qualidade no backend. API/branding futuros continuam desativados.
+- Migration 16: catálogo e transição explícita de tenants existentes para LEGACY privado, sem fallback para novos tenants. Migration 17: outbox de convites cifrado, idempotência de relatórios e tamanhos de artefactos. Migration 18: nomes de catálogo. Seed SaaS integrado no seed principal sem sobrescrever valores existentes.
+- `/signup`: seis passos; provisionamento atómico, convite pelo worker, ativação de conta, aceitação legal autenticada e checklist no dashboard.
+- `/settings/subscription`: plano/estado/trial/período, barras e avisos 80/90/100%, comparação, downgrade, alteração versionada e cancelamento no fim do período.
+- `/settings/billing`: faturas reais do tenant, estado vazio e faturação manual sem checkout fictício. Não inventa documento fiscal inexistente.
+- `/settings/data-exports`: pedido, acompanhamento e download. JSON.gz com dados de domínio e metadados de documentos; worker, snapshot consistente, allowlist, segredos excluídos, download assinado vinculado ao administrador, expiração de 24 h e auditoria.
+- `/platform`, login, tenants/lista/detalhe: overview, subscription, usage, users, projects, audit e suporte. Suspensão/reativação com confirmação forte e motivo; transições comerciais versionadas e auditadas.
+- Suporte separado, autorizado pelo Super Admin, apenas diagnóstico de leitura, banner, prazo de 15 minutos e encerramento/expiração auditados. Sem impersonação ou exportação silenciosa.
+- Configuração explícita de produção, cookies seguros, proxy restrito, CORS/CSRF, headers, logs estruturados sem payloads sensíveis e readiness de API/worker.
+- Docker multi-stage com runtimes non-root, dependências de produção, tags SHA e migration job separado. Compose de release configurável com ambientes/volumes independentes; smoke de staging de leitura.
+- CI ampliado com validação de migrations e build das imagens de produção, mantendo testes existentes. Sem deploy de produção.
+- Runbooks de planos/subscrições/limites/onboarding/platform/support/billing/deployment/releases/backup/produção e checklist operacional.
 
-## Implementação atual
+## Validação desta completion pass
 
-- Migration aditiva `202610260015_saas_commercialization`, validada no PostgreSQL
-  isolado e aplicada no Compose local, preservando os dados existentes. Não altera dados das obras; adiciona CLOSED ao enum de tenant.
-- Identidades PLATFORM SUPER_ADMIN/SUPPORT distintas de Tenant ADMIN. Sessões opacas,
-  hash no banco, cookie HttpOnly com caminho de plataforma, CSRF Origin, expiração de
-  30 minutos e reautenticação após 10 minutos para ações críticas. MFA ainda não implementado.
-- API de plataforma: autenticação, logout, métricas agregadas sem receita inventada,
-  listagem/detalhe de tenants, consulta de planos/auditoria, suspensão, reativação e fecho.
-- Suporte autorizado pelo Super Admin, prazo de 15 minutos, diagnóstico apenas de leitura,
-  sem assumir identidade de utilizador. Auditoria de abertura/encerramento e acesso condicionado
-  ao operador designado. O frontend com banner ainda falta.
-- Catálogo, limites e features no schema; seed idempotente separado. Preços nulos até
-  configuração comercial. O seed SaaS ainda não está ligado ao seed principal.
-- EntitlementService, StorageUsageService e QuotaService: cálculo de uso a partir de recursos,
-  BigInt para bytes, reservas de upload, bloqueio transacional por tenant e snapshot idempotente.
-- Políticas de transição, trial efetivo, cancelamento e downgrade; SubscriptionService
-  testa versão antes da alteração. As APIs de subscrição do tenant ainda não estão expostas.
-- Abstração BillingProvider e implementação manual com drafts idempotentes. Não há checkout,
-  gateway externo nem webhooks falsos. Emissão/baixa de invoices ainda falta.
-- Serviço transacional de onboarding implementado mas deliberadamente não exposto antes
-  de completar o enforcement nas operações existentes. A aceitação legal deve ser feita
-  pelo administrador convidado após verificar o email, não pelo operador em seu nome.
-- Telemetria HTTP com X-Request-ID gerado no servidor, logs estruturados sem query/body/headers, métricas por processo protegidas por Super Admin, interface segura para error tracking e `/health/live`/`health/ready`.
-- Entrega de convites sem tokens nos logs: SMTP configurado ou EML privado no ambiente local.
-  O envio real de email não foi validado. Falha de entrega após provisionamento exige reenvio.
+Regressão Docker limpa: 209 unitários, 212 testes de integração e 22 E2E passaram, juntamente com lint, typecheck, seed e build. Um teste adicional com Redis real passou após corrigir o encerramento prematuro de scanners vazios; o CI executa os 213 testes de integração juntos. Nenhuma asserção dos módulos anteriores foi removida.
 
-## Quotas e catálogo de demonstração
+Compose principal e release local: cinco serviços healthy; 18 migrations aplicadas. Runtimes API/worker sem TypeScript/Prisma CLI, UID 1000; worker estável sem reinícios após a correção. Smoke de leitura, bootstrap isolado e backup/restore PostgreSQL isolado passaram. Ver [evidências e limites](validation-m8.md).
 
-| Plano | Obras não concluídas | Utilizadores ativos/convidados | GiB | Relatórios/mês |
-|---|---:|---:|---:|---:|
-| Starter | 3 | 10 | 10 | 10 |
-| Professional | 20 | 75 | 100 | 250 |
-| Enterprise | sem limite | sem limite | sem limite | sem limite |
+## Operação antes de lançamento
 
-Números de seed, não oferta comercial definitiva. AI_ACTIONS é zero; IA não é exposta.
-Starter não possui advanced reports. Professional/Enterprise habilitam as funcionalidades
-existentes de relatórios, analytics, portais e qualidade. API_ACCESS, CUSTOM_BRANDING e
-PRIORITY_SUPPORT permanecem desativados porque o respetivo produto ainda não foi entregue.
-Flags operacionais nunca concedem entitlements comerciais.
-
-## Trabalho obrigatório restante
-
-1. Ligar quotas a criação/reativação de obras, convites/utilizadores, todos os uploads e
-   geração de relatórios; testar concorrência pela API, não só pelo serviço.
-2. Definir migração explícita de tenants existentes, sem fallback silencioso que contorne quotas.
-3. Aplicar estado da subscrição e tenant a mutações, mantendo login/leitura limitada/exportação
-   autorizada; revisão também dos workers e downloads.
-4. APIs de planos editáveis e feature flags, controlo de versões e auditoria de todas as mutações.
-5. Expor onboarding com convite, aceitação legal autenticada, preferências e checklist/empty states.
-6. APIs e páginas de subscrição/billing; emissão e baixa manual de invoices, sem pagamento online.
-7. Worker de expiração de trial/cancelamento, alertas e uso acumulado de relatórios sem perdas.
-8. Exportação isolada de dados/documentos, limites de armazenamento dos artefactos e retenção.
-9. Frontend de plataforma, suporte com banner permanente e testes E2E de todos os fluxos M8.
-10. Rate limiting por tenant/user/IP; ampliar métricas de filas/jobs/DB, configurar destino externo
-    de error tracking e validação de configuração para staging/production.
-11. Imagens de produção, configuração isolada de staging, pipeline de release com aprovação,
-    secret scan, backups e teste de restore não destrutivo.
-12. Documentação final exigida, regressão completa final, commit/push e CI remoto do M8 verde.
-
-Nenhum deploy de produção foi executado. Não usar esta etapa como autorização de lançamento.
+DNS/TLS, SMTP real, storage/backup/PITR do fornecedor, contas e segredos de staging/produção, coleta externa de logs/erros e aprovação de produção são responsabilidades de provisionamento, descritas em production-checklist.md. Esta entrega prepara a configuração; não afirma que esses serviços remotos existem nem executa deploy de produção. MFA, gateway online, API pública e branding não são produtos fictícios implementados nesta milestone.

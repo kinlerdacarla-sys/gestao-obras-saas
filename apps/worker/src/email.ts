@@ -11,8 +11,14 @@ export async function queueNotificationEmail(db: Database) {
   const queue = new Queue("email-notification", {
     connection: redisConnection(),
   });
+  queue.on("error", () =>
+    console.error(
+      JSON.stringify({ event: "queue_error", queue: "email-notification" }),
+    ),
+  );
   let queued = 0;
   try {
+    await queue.waitUntilReady();
     let cursor: string | undefined;
     for (;;) {
       const rows = await db.notification.findMany({

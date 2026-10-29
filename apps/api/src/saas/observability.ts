@@ -52,6 +52,7 @@ export function requestTelemetry(
         durationMs: Math.round(durationMs * 100) / 100,
         tenantId: auth?.tenantId,
         userId: auth?.userId,
+        projectId: typeof req.params.projectId === "string" && /^[a-f0-9-]{36}$/i.test(req.params.projectId) ? req.params.projectId : undefined,
         environment: process.env.APP_ENV ?? process.env.NODE_ENV,
         release: process.env.RELEASE_SHA ?? "development",
       }),

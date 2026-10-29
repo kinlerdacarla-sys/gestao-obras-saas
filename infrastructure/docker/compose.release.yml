@@ -1,0 +1,99 @@
+name: obras-${APP_ENV:?Set APP_ENV to staging or production}
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: obras
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Provide a dedicated database password}
+      POSTGRES_DB: obras_${APP_ENV}
+    volumes: ["database:/var/lib/postgresql"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U obras -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  redis:
+    image: redis:8.2
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Provide a dedicated Redis password}
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    volumes: ["redis:/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    image: obras-migration:${IMAGE_TAG:?Use the full commit SHA}
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: migration
+    environment: &runtime
+      NODE_ENV: production
+      APP_ENV: ${APP_ENV}
+      RELEASE_SHA: ${IMAGE_TAG}
+      DATABASE_URL: postgresql://obras:${POSTGRES_PASSWORD}@postgres:5432/obras_${APP_ENV}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      WEB_ORIGIN: ${WEB_ORIGIN:?HTTPS origin required}
+      JWT_SECRET: ${JWT_SECRET:?Random signing key required}
+      INVITATION_ENCRYPTION_KEY: ${INVITATION_ENCRYPTION_KEY:?Independent 64 hex key required}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      DOCUMENT_STORAGE_PATH: /data/document-storage
+      BUDGET_STORAGE_PATH: /data/budget-storage
+      MAIL_TRANSPORT: smtp
+      SMTP_URL: ${SMTP_URL:?SMTP required}
+      MAIL_FROM: ${MAIL_FROM:?Sender required}
+      SALES_EMAIL: ${SALES_EMAIL:?Contact required}
+      TERMS_URL: ${TERMS_URL:?Legal URL required}
+      PRIVACY_URL: ${PRIVACY_URL:?Legal URL required}
+      TERMS_VERSION: ${TERMS_VERSION:?Published terms version required}
+      PRIVACY_VERSION: ${PRIVACY_VERSION:?Published privacy version required}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  api:
+    image: obras-api:${IMAGE_TAG}
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: production-api
+    environment: *runtime
+    volumes: ["documents:/data/document-storage", "budgets:/data/budget-storage"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  worker:
+    image: obras-worker:${IMAGE_TAG}
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: production-worker
+    environment: *runtime
+    volumes: ["documents:/data/document-storage", "budgets:/data/budget-storage"]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  web:
+    image: obras-web:${IMAGE_TAG}
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile
+      target: production-web
+    ports: ["127.0.0.1:${WEB_PORT:-3100}:3000"]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+volumes:
+  database:
+  redis:
+  documents:
+  budgets:

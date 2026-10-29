@@ -1,3 +1,4 @@
+import { CommercialPolicy } from "../saas/policy.js";
 import {
   CanActivate,
   ExecutionContext,
@@ -26,6 +27,7 @@ export const ProjectRoles = (...roles: Role[]) =>
 export class SessionGuard implements CanActivate {
   constructor(
     @Inject(Database) private readonly db: Database,
+    @Inject(CommercialPolicy) private readonly policy: CommercialPolicy,
     @Inject(Reflector) private readonly reflector: Reflector,
   ) {}
   async canActivate(context: ExecutionContext) {
@@ -73,7 +75,7 @@ export class SessionGuard implements CanActivate {
         revokedAt: null,
         expiresAt: { gt: new Date() },
         user: { status: "ACTIVE" },
-        tenant: { status: "ACTIVE" },
+        tenant: { status: { not: "CANCELLED" } },
       },
     });
     const member = await this.db.tenantUser.findFirst({
@@ -91,6 +93,7 @@ export class SessionGuard implements CanActivate {
       sessionId: claims.sessionId,
       role: member.role,
     };
+    await this.policy.request(req);
     const roles = this.reflector.getAllAndOverride<Role[]>("tenantRoles", [
       context.getHandler(),
       context.getClass(),

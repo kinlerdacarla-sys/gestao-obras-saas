@@ -1,3 +1,5 @@
+import { InvitationService } from "../../apps/api/src/saas/invitations.js";
+import { createTestTenant } from "../helpers/tenant.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import { randomUUID } from "node:crypto";
@@ -74,12 +76,12 @@ describe("Core SaaS real PostgreSQL + Redis API", () => {
     db = app.get(Database);
     await app.get(Cache).del("auth:ip:::ffff:127.0.0.1", "auth:ip:127.0.0.1");
     tenantA = (
-      await db.tenant.create({
+      await createTestTenant(db, {
         data: { name: "Tenant A", slug: `a-${suffix}` },
       })
     ).id;
     tenantB = (
-      await db.tenant.create({
+      await createTestTenant(db, {
         data: { name: "Tenant B", slug: `b-${suffix}` },
       })
     ).id;
@@ -365,6 +367,18 @@ describe("Core SaaS real PostgreSQL + Redis API", () => {
     expect(res.status).toBe(201);
     expect(res.body.passwordHash).toBeUndefined();
     expect(res.body.token).toBeUndefined();
+    expect(delivery).not.toHaveBeenCalled();
+    const invitation = await db.invitationDelivery.findFirstOrThrow({
+      where: {
+        userId: (
+          await db.user.findUniqueOrThrow({
+            where: { email: `invite-${suffix}@example.test` },
+          })
+        ).id,
+      },
+    });
+    expect(invitation.ciphertext).toBeTruthy();
+    await app.get(InvitationService).process(invitation.id);
     expect(delivery).toHaveBeenCalledOnce();
     delivery.mockRestore();
   });

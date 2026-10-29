@@ -55,7 +55,7 @@ export class AuthService {
         : null;
     if (
       !tenant ||
-      tenant.status !== "ACTIVE" ||
+      tenant.status === "CANCELLED" ||
       !user ||
       user.status !== "ACTIVE" ||
       !member ||
@@ -121,7 +121,7 @@ export class AuthService {
         userId: session.userId,
         status: "ACTIVE",
         user: { status: "ACTIVE" },
-        tenant: { status: "ACTIVE" },
+        tenant: { status: { not: "CANCELLED" } },
       },
     });
     if (!member) fail(401, "UNAUTHORIZED", "Sessão inválida");
@@ -228,7 +228,7 @@ export class AuthService {
           tenantId: reset.tenantId,
           usedAt: null,
           expiresAt: { gt: new Date() },
-          tenant: { status: "ACTIVE" },
+          tenant: { status: { not: "CANCELLED" } },
           user: { status: { in: ["ACTIVE", "INVITED"] } },
         },
         data: { usedAt: new Date() },
