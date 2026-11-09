@@ -1,0 +1,8 @@
+# Observabilidade
+CloudWatch Logs separados por ambiente e serviço (30 dias staging; 90 produção). CloudTrail regista ações AWS; os audit_logs de domínio registam ações na aplicação. Restringir acesso aos dois. Access logs brutos do ALB/CloudFront não são ativados: incluiriam queries de reset ou download. Usar métricas ALB e os templates de rota nos logs da aplicação; nunca copiar URLs assinados para tickets.
+
+O Terraform prepara alarmes de 5xx, latência, targets não saudáveis, CPU/conexões/espaço livre de RDS, pressão de memória Valkey, profundidade BullMQ, falhas de worker, synthetic e falha de deployment. Container Insights fornece CPU/memória/restarts. Logs estruturados incluem release, ambiente e IDs quando aplicável. Procurar request_exception por requestId, worker_failed por nome da fila; não registar headers ou payloads. CloudWatch serve como error tracker nesta entrega.
+
+Lambda sem credenciais de aplicação consulta /login, /health/live e /health/ready a cada minuto; falha ou ausência de dados deve alertar. SNS requer confirmação manual do destinatário. SES envia bounce/complaint/reject/delay para operações e suprime endereços conforme configuração. Não encaminhar emails de clientes para canais não autorizados.
+
+Ativar tags de alocação de custo, confirmar cobertura das despesas não etiquetáveis e orçamento global da conta. AWS Budgets por ambiente em USD usa o montante aprovado e limiares 50/80/100%. Rever alarmes/conexões conforme classe e carga real. Antes do piloto provocar falhas controladas **em staging** e guardar notificação e recuperação. Nenhuma métrica AWS real observada neste ensaio.

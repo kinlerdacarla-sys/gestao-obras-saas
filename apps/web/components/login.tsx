@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, send } from "../lib/api";
 import { Notice } from "@obras/ui";
@@ -8,9 +8,18 @@ export function Login({
 }: {
   mode?: "login" | "forgot" | "reset";
 }) {
+  const [interactive,setInteractive]=useState(false);
+  useEffect(()=>{setInteractive(true);},[]);
   const [error, setError] = useState(""),
     [success, setSuccess] = useState(""),
     [busy, setBusy] = useState(false);
+  const [support, setSupport] = useState<string | null>(null);
+  useEffect(() => {
+    fetch("/api/v1/service-info")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => setSupport(v?.supportEmail ?? null))
+      .catch(() => {});
+  }, []);
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -73,7 +82,7 @@ export function Login({
         </p>
         {error && <Notice error>{error}</Notice>}
         {success && <Notice>{success}</Notice>}
-        <form className="form" onSubmit={submit}>
+        <form className="form" method="post" onSubmit={submit}>
           {mode !== "reset" && (
             <>
               <label>
@@ -110,7 +119,7 @@ export function Login({
               />
             </label>
           )}
-          <button disabled={busy}>
+          <button disabled={!interactive || busy}>
             {busy
               ? "A processar…"
               : mode === "login"
@@ -125,7 +134,16 @@ export function Login({
           >
             {mode === "login" ? "Esqueceu-se da password?" : "Voltar ao login"}
           </Link>
-          {mode === "login" && <Link className="text-link" href="/signup">Criar empresa</Link>}
+          {mode === "login" && (
+            <Link className="text-link" href="/signup">
+              Criar empresa
+            </Link>
+          )}
+          {support && (
+            <a className="text-link" href={`mailto:${support}`}>
+              Contactar suporte
+            </a>
+          )}
         </form>
       </main>
     </div>

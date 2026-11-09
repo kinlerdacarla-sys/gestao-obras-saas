@@ -12,7 +12,7 @@ import {
 } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
+import { documentStorage } from "../../../../packages/config/src/storage.js";
 import { gzipSync } from "node:zlib";
 import path from "node:path";
 import { Queue } from "bullmq";
@@ -39,7 +39,11 @@ export class DataExportService implements OnModuleDestroy {
   async onModuleDestroy() {
     await this.queue.close();
   }
-  file(id: string) {
+  key(tenantId: string, id: string) {
+    return `tenant/${z.uuid().parse(tenantId)}/exports/${z.uuid().parse(id)}.json.gz`;
+  }
+  file(id: string, tenantId?: string) {
+    if (tenantId) return documentStorage().file(this.key(tenantId, id));
     return path.join(
       path.resolve(
         process.env.DOCUMENT_STORAGE_PATH ?? "work/document-storage",
@@ -227,21 +231,19 @@ export class DataExportService implements OnModuleDestroy {
         },
         { isolationLevel: "RepeatableRead", timeout: 120000 },
       );
-      if(job.expiresAt <= new Date()) throw Error("EXPORT_EXPIRED");
+      if (job.expiresAt <= new Date()) throw Error("EXPORT_EXPIRED");
       const bytes = gzipSync(Buffer.from(serial(data)));
       await this.allowed(job.tenantId, job.requestedBy);
-      await mkdir(path.dirname(this.file(id)), {
-        recursive: true,
-        mode: 0o700,
+      await documentStorage().put(this.key(job.tenantId, id), bytes, {
+        contentType: "application/gzip",
       });
-      await writeFile(this.file(id), bytes, { mode: 0o600 });
       await this.db.$transaction(async (tx) => {
         await tx.dataExportJob.update({
           where: { id },
           data: {
             status: "COMPLETED",
             completedAt: new Date(),
-            objectKey: `tenant-exports/${id}.json.gz`,
+            objectKey: this.key(job.tenantId, id),
             sizeBytes: BigInt(bytes.length),
           },
         });
@@ -256,7 +258,9 @@ export class DataExportService implements OnModuleDestroy {
         );
       });
     } catch (error) {
-      await unlink(this.file(id)).catch(() => {});
+      await documentStorage()
+        .remove(this.key(job.tenantId, id))
+        .catch(() => {});
       await this.db.dataExportJob.update({
         where: { id },
         data: {
@@ -326,7 +330,8 @@ export class DataExportController {
     const job = await this.exports.get(r, id);
     if (job.status !== "COMPLETED" || job.expiresAt <= new Date())
       fail(410, "EXPORT_EXPIRED", "Exportação indisponível");
-    const bytes = await readFile(this.exports.file(id));
+    const key = job.objectKey ?? this.exports.key(job.tenantId, id);
+    const bytes = await documentStorage().authorizedRead(key,r.auth.tenantId);
     await recordAudit(
       this.exports.db,
       r.auth,

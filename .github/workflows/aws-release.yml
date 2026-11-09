@@ -1,0 +1,118 @@
+name: Controlled AWS release
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Exact approved main commit
+        required: true
+        type: string
+      risky_migration:
+        description: Create and verify a fresh RDS snapshot before migration
+        type: boolean
+        default: false
+      promote_production:
+        description: Request protected production approval after successful staging
+        type: boolean
+        default: false
+permissions: { contents: read }
+concurrency:
+  group: aws-release
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main' && vars.AWS_RELEASES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Verify exact main SHA and successful CI
+        env: { SHA: "${{ inputs.sha }}", GH_TOKEN: "${{ github.token }}" }
+        run: |
+          set -eu
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$SHA" origin/main
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$SHA&branch=main&event=push" --jq '.workflow_runs[0].conclusion' | grep -qx success
+          git checkout --detach "$SHA"
+          for name in api web worker migration; do
+            target="production-$name"; [ "$name" != migration ] || target=migration
+            docker build --target "$target" -f infrastructure/docker/Dockerfile -t "obras-$name:$SHA" .
+          done
+          docker save "obras-api:$SHA" "obras-web:$SHA" "obras-worker:$SHA" "obras-migration:$SHA" | gzip > images.tar.gz
+      - uses: actions/upload-artifact@v4
+        with: { name: immutable-images, path: images.tar.gz, retention-days: 2 }
+  staging:
+    needs: prepare
+    environment: staging
+    runs-on: ubuntu-latest
+    permissions: { contents: read, id-token: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.sha }}" }
+      - uses: actions/download-artifact@v4
+        with: { name: immutable-images }
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+      - name: Migrate, release and smoke
+        env:
+          SHA: ${{ inputs.sha }}
+          AUTHORIZED_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          DEPLOYMENT_CONFIG: ${{ vars.DEPLOYMENT_CONFIG }}
+          RISKY_MIGRATION: ${{ inputs.risky_migration }}
+          DEPLOY_ENVIRONMENT: staging
+        run: |
+          docker load -i images.tar.gz
+          python infrastructure/release/deploy.py --sha "$SHA"
+      - uses: actions/upload-artifact@v4
+        with: { name: staging-evidence, path: staging-evidence.json }
+  protection:
+    needs: staging
+    if: inputs.promote_production
+    runs-on: ubuntu-latest
+    permissions: { contents: read, deployments: read }
+    steps:
+      - name: Fail closed unless reviewers and self-review prevention are configured
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/environments/production" |
+            jq -e '.can_admins_bypass == false and any(.protection_rules[]; .type == "required_reviewers" and .prevent_self_review == true and (.reviewers|length)>0)'
+  production:
+    needs: protection
+    runs-on: ubuntu-latest
+    environment: production
+    permissions: { contents: read, id-token: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.sha }}" }
+      - uses: actions/download-artifact@v4
+        with: { name: immutable-images }
+      - uses: actions/download-artifact@v4
+        with: { name: staging-evidence }
+      - name: Require reviewed go-live evidence for this exact SHA
+        env:
+          EVIDENCE: ${{ vars.GO_LIVE_EVIDENCE }}
+          SHA: ${{ inputs.sha }}
+        run: |
+          python -c 'import os,json,pathlib; pathlib.Path("gate.json").write_text(json.dumps(json.loads(os.environ["EVIDENCE"])))'
+          python infrastructure/release/go-live.py --evidence gate.json --sha "$SHA"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+      - name: Promote identical images, migrate, verify and roll back on failure
+        env:
+          SHA: ${{ inputs.sha }}
+          AUTHORIZED_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+          DEPLOYMENT_CONFIG: ${{ vars.DEPLOYMENT_CONFIG }}
+          RISKY_MIGRATION: ${{ inputs.risky_migration }}
+          DEPLOY_ENVIRONMENT: production
+        run: |
+          docker load -i images.tar.gz
+          python infrastructure/release/deploy.py --sha "$SHA"
+      - uses: actions/upload-artifact@v4
+        with: { name: production-evidence, path: production-evidence.json }

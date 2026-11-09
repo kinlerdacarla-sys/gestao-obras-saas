@@ -1,24 +1,28 @@
 import "dotenv/config";
 import { z } from "zod";
 import { Database } from "../apps/api/src/platform.js";
-import { hashPassword } from "../apps/api/src/auth/crypto.js";
+import { encryptInvitation } from "../apps/api/src/saas/invitations.js";
+import {
+  hashPassword,
+  opaqueToken,
+  tokenHash,
+} from "../apps/api/src/auth/crypto.js";
 const input = z
   .object({
     email: z.email(),
     name: z.string().min(2),
-    password: z.string().min(16),
     reason: z.string().min(10),
   })
   .safeParse({
     email: process.env.PLATFORM_BOOTSTRAP_EMAIL,
     name: process.env.PLATFORM_BOOTSTRAP_NAME,
-    password: process.env.PLATFORM_BOOTSTRAP_PASSWORD,
     reason: process.env.PLATFORM_BOOTSTRAP_REASON,
   });
 if (!input.success) throw Error("PLATFORM_BOOTSTRAP_CONFIG_INVALID");
 const db = new Database();
 try {
-  const passwordHash = await hashPassword(input.data.password);
+  const token = opaqueToken();
+  const passwordHash = await hashPassword(opaqueToken());
   await db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(8062026)`;
     if (
@@ -34,11 +38,19 @@ try {
         email: input.data.email,
         name: input.data.name,
         passwordHash,
-        status: "ACTIVE",
+        status: "INVITED",
       },
     });
     const operator = await tx.platformUser.create({
       data: { userId: user.id, role: "SUPER_ADMIN" },
+    });
+    await tx.platformInvitation.create({
+      data: {
+        userId: user.id,
+        tokenHash: tokenHash(token),
+        ciphertext: encryptInvitation(token),
+        expiresAt: new Date(Date.now() + 3600000),
+      },
     });
     await tx.platformAuditLog.create({
       data: {
@@ -50,9 +62,7 @@ try {
       },
     });
   });
-  console.info(
-    "Platform bootstrap completed. Rotate the initial credential after first access.",
-  );
+  console.info("Platform invitation queued; expires in one hour.");
 } catch {
   console.error(
     "PLATFORM_BOOTSTRAP_FAILED: verify prerequisites through the authorized database operator",

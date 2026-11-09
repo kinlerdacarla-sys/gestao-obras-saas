@@ -1,21 +1,11 @@
 import { Queue } from "bullmq";
-import { unlink } from "node:fs/promises";
-import path from "node:path";
+import { documentStorage } from "../../../packages/config/src/storage.js";
 import { Database } from "../../api/src/platform.js";
 import { QuotaService } from "../../api/src/saas/entitlements.js";
 import { effectiveSubscriptionStatus } from "../../../packages/domain/src/saas.js";
 import { redisConnection } from "../../../packages/config/src/redis.js";
 import { intelligenceContext } from "./intelligence.js";
-async function remove(key: string) {
-  const root = path.resolve(
-      process.env.DOCUMENT_STORAGE_PATH ?? "work/document-storage",
-    ),
-    file = path.resolve(root, key);
-  if (!file.startsWith(root + path.sep)) throw Error("INVALID_STORAGE_PATH");
-  await unlink(file).catch((e: NodeJS.ErrnoException) => {
-    if (e.code !== "ENOENT") throw Error("STORAGE_CLEANUP_FAILED");
-  });
-}
+const remove = (key: string) => documentStorage().remove(key);
 export async function scanInvitations(db: Database) {
   const queue = new Queue("tenant-invitation", {
     connection: redisConnection(),
@@ -27,9 +17,34 @@ export async function scanInvitations(db: Database) {
   );
   try {
     await queue.waitUntilReady();
+    const platform = await db.platformInvitation.findMany({
+      where: {
+        sentAt: null,
+        usedAt: null,
+        attempts: { lt: 5 },
+        expiresAt: { gt: new Date() },
+        OR: [{ leaseUntil: null }, { leaseUntil: { lt: new Date() } }],
+      },
+      take: 20,
+    });
+    for (const row of platform)
+      await queue.add(
+        "platform",
+        { id: row.id },
+        {
+          jobId: "platform-" + row.id,
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      );
+    await db.platformInvitation.updateMany({
+      where: { expiresAt: { lte: new Date() }, ciphertext: { not: null } },
+      data: { ciphertext: null },
+    });
     const rows = await db.invitationDelivery.findMany({
       where: {
         sentAt: null,
+        attempts: { lt: 5 },
         expiresAt: { gt: new Date() },
         OR: [{ leaseUntil: null }, { leaseUntil: { lt: new Date() } }],
       },

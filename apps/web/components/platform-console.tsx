@@ -47,6 +47,8 @@ interface Detail {
   audit: { id: string; action: string; createdAt: string }[];
 }
 export function PlatformLogin() {
+  const [interactive,setInteractive]=useState(false);
+  useEffect(()=>{setInteractive(true);},[]);
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   async function login(e: React.FormEvent<HTMLFormElement>) {
@@ -74,7 +76,7 @@ export function PlatformLogin() {
       <h1>Acesso à plataforma</h1>
       <p>Área reservada aos operadores da plataforma.</p>
       {error && <p role="alert">{error}</p>}
-      <form className="card" onSubmit={login}>
+      <form className="card" method="post" onSubmit={login}>
         <label>
           E-mail
           <input name="email" type="email" required autoComplete="username" />
@@ -88,7 +90,7 @@ export function PlatformLogin() {
             autoComplete="current-password"
           />
         </label>
-        <button disabled={busy}>Entrar na plataforma</button>
+        <button disabled={!interactive || busy}>Entrar na plataforma</button>
       </form>
       <Link href="/login">Login da empresa</Link>
     </main>

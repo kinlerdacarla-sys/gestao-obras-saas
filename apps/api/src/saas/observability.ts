@@ -13,6 +13,9 @@ export const safeErrorTracker: ErrorTracker = {
     if (process.env.NODE_ENV !== "test")
       console.error(
         JSON.stringify({
+          timestamp: new Date().toISOString(),
+          service: "api",
+          message: "request exception",
           level: "error",
           event: "request_exception",
           ...event,
@@ -42,6 +45,9 @@ export function requestTelemetry(
     // Only route templates and allowlisted identifiers; never raw URL/query/body/headers.
     console.info(
       JSON.stringify({
+        timestamp: new Date().toISOString(),
+        service: "api",
+        message: "request completed",
         level: "info",
         event: "http_request",
         requestId,
@@ -52,7 +58,11 @@ export function requestTelemetry(
         durationMs: Math.round(durationMs * 100) / 100,
         tenantId: auth?.tenantId,
         userId: auth?.userId,
-        projectId: typeof req.params.projectId === "string" && /^[a-f0-9-]{36}$/i.test(req.params.projectId) ? req.params.projectId : undefined,
+        projectId:
+          typeof req.params.projectId === "string" &&
+          /^[a-f0-9-]{36}$/i.test(req.params.projectId)
+            ? req.params.projectId
+            : undefined,
         environment: process.env.APP_ENV ?? process.env.NODE_ENV,
         release: process.env.RELEASE_SHA ?? "development",
       }),

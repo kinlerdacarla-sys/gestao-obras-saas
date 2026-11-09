@@ -16,7 +16,8 @@
     "apps/api/src/**/*.ts",
     "apps/worker/src/**/*.ts",
     "packages/**/*.ts",
-    "prisma/seed.ts"
+    "prisma/seed.ts",
+    "scripts/bootstrap-platform.ts", "scripts/storage-integrity.ts"
   ],
   "exclude": ["node_modules", "dist", "apps/web"]
 }

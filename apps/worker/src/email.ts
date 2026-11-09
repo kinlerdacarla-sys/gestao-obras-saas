@@ -1,6 +1,6 @@
 import { notificationCategory } from "../../../packages/domain/src/notifications.js";
 export { notificationCategory } from "../../../packages/domain/src/notifications.js";
-import nodemailer from "nodemailer";
+import { sendTransactionalMail } from "../../../packages/config/src/mail.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Queue } from "bullmq";
@@ -116,26 +116,16 @@ export async function deliverNotificationEmail(db: Database, id: string) {
     subject: "Obras: nova notificação",
     text: `Tem uma nova notificação na plataforma Obras. Consulte ${configuration().WEB_ORIGIN}/notifications`,
   };
-  if (process.env.MAIL_TRANSPORT === "stream") {
-    const transport = nodemailer.createTransport({
-      streamTransport: true,
-      buffer: true,
-      newline: "unix",
-    });
-    const result = await transport.sendMail(message);
+  const result = await sendTransactionalMail(message);
+  if (result.message) {
     const directory = path.resolve(
       process.env.MAIL_OUTBOX_PATH ?? "work/mail-outbox",
     );
-    await mkdir(directory, { recursive: true });
-    await writeFile(path.join(directory, `${row.id}.eml`), result.message);
-  } else if (process.env.SMTP_URL) {
-    await nodemailer
-      .createTransport(process.env.SMTP_URL, {
-        disableFileAccess: true,
-        disableUrlAccess: true,
-      })
-      .sendMail(message);
-  } else throw Error("MAIL_TRANSPORT_NOT_CONFIGURED");
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    await writeFile(path.join(directory, `${row.id}.eml`), result.message, {
+      mode: 0o600,
+    });
+  }
   await db.notification.update({
     where: { id },
     data: { emailedAt: new Date() },

@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { sendTransactionalMail } from "../../../../packages/config/src/mail.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -22,33 +22,21 @@ import { fail } from "../platform.js";
 @Injectable()
 export class NotificationService {
   ensureAvailable() {
+    const config = configuration();
     if (
-      configuration().NODE_ENV === "production" &&
-      (!process.env.SMTP_URL ||
-        process.env.MAIL_TRANSPORT !== "smtp" ||
-        !process.env.MAIL_FROM)
+      config.NODE_ENV === "production" &&
+      !["smtp", "ses"].includes(config.MAIL_TRANSPORT ?? "")
     )
       fail(503, "DELIVERY_UNAVAILABLE", "Entrega de email não configurada");
   }
   async deliverReset(email: string, token: string) {
     this.ensureAvailable();
-    const smtp = process.env.MAIL_TRANSPORT === "smtp";
-    if (smtp && !process.env.SMTP_URL)
-      fail(503, "DELIVERY_UNAVAILABLE", "SMTP não configurado");
-    const transport = smtp
-      ? nodemailer.createTransport(process.env.SMTP_URL!)
-      : nodemailer.createTransport({
-          streamTransport: true,
-          buffer: true,
-          newline: "unix",
-        });
-    const message = await transport.sendMail({
-      from: process.env.MAIL_FROM ?? "obras@example.test",
+    const message = await sendTransactionalMail({
       to: email,
       subject: "Definir acesso à plataforma Obras",
       text: `Defina a sua password através deste link temporário: ${configuration().WEB_ORIGIN}/reset-password?token=${encodeURIComponent(token)}`,
     });
-    if (!smtp) {
+    if (message.message) {
       const folder = path.resolve(
         process.env.MAIL_OUTBOX_PATH ?? "work/mail-outbox",
       );

@@ -113,7 +113,7 @@ export function Signup() {
         ))}
       </ol>
       {error && <p role="alert">{error}</p>}
-      <form className="card" onSubmit={next}>
+      <form className="card" method="post" onSubmit={next}>
         <h2>{steps[step]}</h2>
         {step === 0 && (
           <>

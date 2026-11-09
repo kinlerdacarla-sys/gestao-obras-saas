@@ -1,3 +1,4 @@
+import { MaintenanceController, ServiceInfo } from "./launch.js";
 import { DataExportService, DataExportController } from "./exports.js";
 import { SignupController, TenantSaasController } from "./tenant-api.js";
 import { OnboardingService } from "./onboarding.js";
@@ -468,6 +469,8 @@ class PlatformController {
   imports: [NotificationModule],
   controllers: [
     DataExportController,
+    MaintenanceController,
+    ServiceInfo,
     PlatformLoginController,
     PlatformController,
     SignupController,

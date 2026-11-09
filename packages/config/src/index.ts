@@ -17,7 +17,20 @@ const schema = z
     TRUST_PROXY: z.string().default("false"),
     DOCUMENT_STORAGE_PATH: z.string().optional(),
     BUDGET_STORAGE_PATH: z.string().optional(),
-    MAIL_TRANSPORT: z.enum(["smtp", "stream"]).optional(),
+    STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
+    S3_BUCKET: z.string().optional(),
+    S3_KMS_KEY_ID: z.string().optional(),
+    S3_ENDPOINT: z.string().optional(),
+    AWS_REGION: z.string().optional(),
+    DB_POOL_MAX: z.coerce.number().int().min(1).max(20).default(5),
+    MAIL_TRANSPORT: z.enum(["smtp", "stream", "ses"]).optional(),
+    FROM_NAME: z
+      .string()
+      .regex(/^[^\r\n<>]+$/)
+      .default("Obras"),
+    REPLY_TO: z.string().optional(),
+    SUPPORT_EMAIL: z.string().optional(),
+    SES_CONFIGURATION_SET: z.string().optional(),
     SMTP_URL: z.string().optional(),
     MAIL_FROM: z.string().optional(),
     INVITATION_ENCRYPTION_KEY: z.string().optional(),
@@ -30,6 +43,15 @@ const schema = z
   .superRefine((config, ctx) => {
     const issue = (key: string, message: string) =>
       ctx.addIssue({ code: "custom", path: [key], message });
+    if (config.S3_ENDPOINT && config.NODE_ENV !== "test")
+      issue("S3_ENDPOINT", "Endpoint alternativo permitido apenas em testes");
+    if (config.STORAGE_DRIVER === "s3") {
+      if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(config.S3_BUCKET ?? ""))
+        issue("S3_BUCKET", "Configure bucket privado");
+      if (!config.AWS_REGION) issue("AWS_REGION", "Configure região AWS");
+      if (config.NODE_ENV === "production" && !config.S3_KMS_KEY_ID)
+        issue("S3_KMS_KEY_ID", "Configure chave KMS");
+    }
     if (config.TRUST_PROXY !== "false") {
       for (const item of config.TRUST_PROXY.split(",")) {
         const [ip, bits] = item.trim().split("/");
@@ -95,13 +117,25 @@ const schema = z
         issue(key, "URL inválida");
       }
     }
-    for (const key of ["DOCUMENT_STORAGE_PATH", "BUDGET_STORAGE_PATH"] as const)
+    for (const key of config.STORAGE_DRIVER === "local"
+      ? (["DOCUMENT_STORAGE_PATH", "BUDGET_STORAGE_PATH"] as const)
+      : [])
       if (!config[key] || !path.isAbsolute(config[key]!))
         issue(key, "Exige diretório persistente absoluto");
-    if (config.MAIL_TRANSPORT !== "smtp")
-      issue("MAIL_TRANSPORT", "Produção exige SMTP");
-    if (!config.SMTP_URL || !/^smtps?:\/\//.test(config.SMTP_URL))
+    if (!["smtp", "ses"].includes(config.MAIL_TRANSPORT ?? ""))
+      issue("MAIL_TRANSPORT", "Produção exige SMTP ou SES");
+    if (
+      config.MAIL_TRANSPORT === "smtp" &&
+      (!config.SMTP_URL || !/^smtps?:\/\//.test(config.SMTP_URL))
+    )
       issue("SMTP_URL", "Configure o serviço de email");
+    if (config.MAIL_TRANSPORT === "ses") {
+      if (!config.AWS_REGION || !config.SES_CONFIGURATION_SET)
+        issue("SES_CONFIGURATION_SET", "Configure região e configuração SES");
+      for (const key of ["REPLY_TO", "SUPPORT_EMAIL"] as const)
+        if (!z.email().safeParse(config[key]).success)
+          issue(key, "Configure contacto real");
+    }
     if (!z.email().safeParse(config.MAIL_FROM).success)
       issue("MAIL_FROM", "Configure remetente válido");
     if (!z.email().safeParse(config.SALES_EMAIL).success)
@@ -118,7 +152,10 @@ const schema = z
         issue(key, "Configure a versão legal publicada");
   });
 export function configuration(env: NodeJS.ProcessEnv = process.env) {
-  const result = schema.safeParse(env);
+  const result = schema.safeParse({
+    ...env,
+    MAIL_FROM: env.FROM_EMAIL ?? env.MAIL_FROM,
+  });
   // Never include raw environment values in startup errors (Zod union errors can echo input).
   if (!result.success)
     throw new Error(

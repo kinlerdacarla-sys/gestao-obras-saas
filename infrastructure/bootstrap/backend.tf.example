@@ -1,0 +1,9 @@
+# After the approved one-time bootstrap, copy to backend.tf and migrate the
+# bootstrap state into its own restricted prefix. Supply real bucket/KMS via
+# -backend-config. Do not copy environment state between accounts.
+terraform {
+  backend "s3" {
+    encrypt = true
+    use_lockfile = true
+  }
+}

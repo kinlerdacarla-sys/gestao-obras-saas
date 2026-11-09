@@ -218,6 +218,39 @@ export class AuthService {
     const reset = await this.db.passwordReset.findUnique({
       where: { tokenHash: tokenHash(input.token) },
     });
+    if (!reset) {
+      const invite = await this.db.platformInvitation.findUnique({
+        where: { tokenHash: tokenHash(input.token) },
+      });
+      if (!invite || invite.usedAt || invite.expiresAt <= new Date())
+        fail(400, "VALIDATION_ERROR", "Token inválido ou expirado");
+      const passwordHash = await hashPassword(input.password);
+      await this.db.$transaction(async (tx) => {
+        const claimed = await tx.platformInvitation.updateMany({
+          where: { id: invite.id, usedAt: null, expiresAt: { gt: new Date() } },
+          data: { usedAt: new Date(), ciphertext: null },
+        });
+        const operator = await tx.platformUser.findUnique({
+          where: { userId: invite.userId },
+        });
+        if (!claimed.count || operator?.status !== "ACTIVE")
+          fail(400, "VALIDATION_ERROR", "Token inválido");
+        const activated = await tx.user.updateMany({
+          where: { id: invite.userId, status: "INVITED" },
+          data: { passwordHash, status: "ACTIVE", emailVerifiedAt: new Date() },
+        });
+        if (!activated.count) fail(400, "VALIDATION_ERROR", "Convite inválido");
+        await tx.platformAuditLog.create({
+          data: {
+            platformUserId: operator.id,
+            entityType: "PlatformUser",
+            entityId: operator.id,
+            action: "PLATFORM_INVITATION_ACCEPTED",
+          },
+        });
+      });
+      return { ok: true };
+    }
     if (!reset || reset.usedAt || reset.expiresAt <= new Date())
       fail(400, "VALIDATION_ERROR", "Token inválido ou expirado");
     const passwordHash = await hashPassword(input.password);

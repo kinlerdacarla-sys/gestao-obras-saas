@@ -1,3 +1,9 @@
+# Deployment M9
+
+A topologia AWS e os passos com SSO, OIDC e aprovações estão em [staging](staging.md), [produção](production.md), [rollback](rollback.md) e [gate](go-live.md). O workflow Controlled AWS release só aceita dispatch a partir de main, com AWS_RELEASES_ENABLED=true. A configuração local não provisiona contas nem ativa esta variável.
+
+## Perfil Docker local
+
 # Deployment configurável
 
 Sem deploy de produção nesta entrega. Requer Docker Compose, proxy HTTPS e secret store. Nunca reutilizar o compose de desenvolvimento para produção.

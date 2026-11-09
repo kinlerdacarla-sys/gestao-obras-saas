@@ -1,0 +1,10 @@
+# Staging
+Estado: VALIDATED LOCALLY para a configuração Terraform; sem URL real, DNS, health ou smoke remoto. Os exemplos em infrastructure/environments/staging são intencionalmente incompletos. Não reutilizar dados/segredos de produção.
+
+1. Operações define conta, perfil SSO, owner, zona própria, origens, remetente, suporte, budget e links legais. Ativar a região e conferir disponibilidade das classes RDS/Valkey. Confirmar destino com aws sts get-caller-identity.
+2. Em conta autorizada, preparar backend S3 versionado/KMS e OIDC (bootstrap uma vez por conta). Custodiar o state inicial e migrá-lo para o backend; nunca versionar state. Restringir acesso por ambiente e à chave .tflock.
+3. Copiar os exemplos para ficheiros privados, configurar backend e rever o plan. Nenhum apply faz parte da validação local. Começar com enable_services=false. Reveja todos os custos antes de autorizar qualquer provisionamento.
+4. Após provisionamento aprovado, obter terraform output -json deployment. Criar roles PostgreSQL separadas para migrations (dono do schema) e aplicação (CONNECT, USAGE, SELECT/INSERT/UPDATE/DELETE e sequences no schema; configurar ALTER DEFAULT PRIVILEGES para objetos do dono). Rotacionar credenciais conforme procedimento.
+5. Preencher Secrets Manager application (DATABASE_URL, JWT_SECRET, INVITATION_ENCRYPTION_KEY), migration (DATABASE_URL do dono), smoke (SMOKE_TENANT, SMOKE_EMAIL, SMOKE_PASSWORD). URLs RDS com sslmode=verify-full e sslrootcert=/app/infrastructure/certificates/rds-global-bundle.crt; não imprimir valores nem passar passwords em comandos guardados no histórico.
+6. Configurar GitHub Environment staging com reviewers, branch main e variáveis AWS_ACCOUNT_ID, AWS_REGION, AWS_DEPLOY_ROLE_ARN, DEPLOYMENT_CONFIG. AWS_RELEASES_ENABLED só após aprovação externa. A role OIDC restringe repo e environment.
+7. Depois de CI verde, disparar Controlled AWS release para SHA exato. Aguardar migrations, serviços estáveis e smoke. Registar URL, SHA, digests, hora, checks, responsável; executar carga controlada e UAT com empresas fictícias. Nunca usar data financeira de um cliente para staging.

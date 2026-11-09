@@ -1,0 +1,10 @@
+name: obras-m9-storage-test
+services:
+  storage:
+    image: motoserver/moto:5.1.19
+    ports: ["127.0.0.1:19009:5000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30

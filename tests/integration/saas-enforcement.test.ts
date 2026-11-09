@@ -276,7 +276,7 @@ describe("M8 real API enforcement and tenant portability", () => {
     expect(r.status).toBe(201);
     await exports.process(r.body.id);
     const artifact = JSON.parse(
-      gunzipSync(await readFile(exports.file(r.body.id))).toString(),
+      gunzipSync(await readFile(exports.file(r.body.id, tenantId))).toString(),
     );
     expect(artifact.tenant.id).toBe(tenantId);
     expect(artifact.projects.length).toBe(4);

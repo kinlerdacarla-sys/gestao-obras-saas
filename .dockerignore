@@ -13,3 +13,8 @@ work
 !.env.example
 *.pem
 *.key
+**/.terraform
+**/*.tfstate*
+**/*.tfvars
+**/*.tfbackend
+**/*.tfplan

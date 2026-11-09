@@ -28,9 +28,13 @@ const invitationWorker = new Worker(
   async (job) =>
     job.name === "scan"
       ? scanInvitations(db)
-      : (await intelligenceContext())
-          .get(InvitationService)
-          .process(job.data.id),
+      : job.name === "platform"
+        ? (await intelligenceContext())
+            .get(InvitationService)
+            .processPlatform(job.data.id)
+        : (await intelligenceContext())
+            .get(InvitationService)
+            .process(job.data.id),
   { connection: redisConnection(), concurrency: 2 },
 );
 await invitationQueue.upsertJobScheduler(
@@ -375,8 +379,56 @@ worker.on("error", () =>
     }),
   ),
 );
+// Emit CloudWatch Embedded Metric Format without a PutMetricData permission.
+const metricsTimer = setInterval(async () => {
+  if (process.env.NODE_ENV !== "production") return;
+  const queues = [
+    "tenant-invitation",
+    "tenant-data-export",
+    "storage-usage-reconciliation",
+    "email-notification",
+    "daily-digest",
+    "report-generation",
+    "budget-import",
+    "notifications",
+  ];
+  try {
+    const counts = await Promise.all(
+      queues.map((q) => healthCache.llen("bull:" + q + ":wait")),
+    );
+    console.info(
+      JSON.stringify({
+        _aws: {
+          Timestamp: Date.now(),
+          CloudWatchMetrics: [
+            {
+              Namespace: "Obras/Operations",
+              Dimensions: [["Environment"]],
+              Metrics: [{ Name: "QueueBacklog", Unit: "Count" }],
+            },
+          ],
+        },
+        Environment: configuration().APP_ENV,
+        QueueBacklog: counts.reduce((n, v) => n + v, 0),
+        event: "queue_depth",
+        service: "worker",
+        release: process.env.RELEASE_SHA,
+      }),
+    );
+  } catch {
+    console.error(
+      JSON.stringify({
+        event: "queue_metrics_failed",
+        service: "worker",
+        level: "error",
+      }),
+    );
+  }
+}, 60000);
+metricsTimer.unref();
 for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, async () => {
+    clearInterval(metricsTimer);
     await invitationWorker.close();
     await invitationQueue.close();
     await exportWorker.close();
@@ -414,10 +466,7 @@ const health = createServer(async (req, res) => {
     return;
   }
   try {
-    await Promise.all([
-      db.$queryRaw`SELECT 1`,
-      healthCache.ping(),
-    ]);
+    await Promise.all([db.$queryRaw`SELECT 1`, healthCache.ping()]);
     const running = [
       invitationWorker,
       exportWorker,

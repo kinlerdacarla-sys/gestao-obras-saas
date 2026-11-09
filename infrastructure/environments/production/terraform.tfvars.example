@@ -1,0 +1,24 @@
+# PENDING EXTERNAL ACTION: blank values must be provided by the authorized operator.
+aws_region = "af-south-1"
+aws_account_id = ""
+owner = ""
+domain_name = ""
+app_domain = ""
+api_domain = ""
+route53_zone_id = ""
+ops_alert_email = ""
+support_email = ""
+from_email = ""
+reply_to_email = ""
+monthly_aws_budget = null
+github_repository = ""
+github_oidc_provider_arn = ""
+db_instance_class = "db.t4g.small"
+redis_node_type = "cache.t4g.small"
+release_sha = ""
+enable_services = false
+vpc_cidr = "10.50.0.0/16"
+multi_az = true
+terms_url = ""
+privacy_url = ""
+legal_version = ""

@@ -6,6 +6,10 @@ import { scanInvitations } from "../../apps/worker/src/saas.js";
 it("closes empty outbox scanners only after their real Redis connections initialize", async () => {
   // A newly provisioned release has no outbox rows: DB work can finish before Redis connects.
   const emptyDatabase = {
+    platformInvitation: {
+      findMany: async () => [],
+      updateMany: async () => ({ count: 0 }),
+    },
     notification: { findMany: async () => [] },
     invitationDelivery: {
       findMany: async () => [],

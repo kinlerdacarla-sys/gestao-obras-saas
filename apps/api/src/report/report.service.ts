@@ -3,8 +3,7 @@ import { HttpException } from "@nestjs/common";
 import { Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
 import { Queue } from "bullmq";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
-import path from "node:path";
+import { documentStorage } from "../../../../packages/config/src/storage.js";
 import type { z } from "zod";
 import { Database, fail } from "../platform.js";
 import { AnalyticsAccess } from "../analytics/kpis.js";
@@ -192,15 +191,6 @@ export class ReportService implements OnModuleDestroy {
       get: () => undefined,
     } as unknown as ApiRequest;
   }
-  file(key: string) {
-    const base = path.resolve(
-        process.env.DOCUMENT_STORAGE_PATH ?? "work/document-storage",
-      ),
-      file = path.resolve(base, key);
-    if (!file.startsWith(base + path.sep))
-      fail(400, "INVALID_OBJECT_KEY", "Chave inválida");
-    return file;
-  }
   async process(id: string) {
     const job = await this.db.reportJob.findUniqueOrThrow({ where: { id } });
     if (job.status === "COMPLETED" || job.status === "EXPIRED") return;
@@ -258,9 +248,7 @@ export class ReportService implements OnModuleDestroy {
           "Permissões alteradas durante geração",
         );
       const objectKey = `tenant/${job.tenantId}/reports/${new Date().getUTCFullYear()}/${job.id}/report.${job.format.toLowerCase()}`;
-      const file = this.file(objectKey);
-      outputFile = file;
-      await mkdir(path.dirname(file), { recursive: true });
+      outputFile = objectKey;
       await this.db.$transaction(async (tx) => {
         await this.quota.assertCanConsume(
           tx,
@@ -268,7 +256,7 @@ export class ReportService implements OnModuleDestroy {
           "STORAGE_GB",
           BigInt(bytes.length),
         );
-        await writeFile(file, bytes);
+        await documentStorage().put(objectKey, bytes);
         await tx.reportJob.update({
           where: { id },
           data: {
@@ -294,7 +282,10 @@ export class ReportService implements OnModuleDestroy {
           });
       });
     } catch (error) {
-      if (outputFile) await unlink(outputFile).catch(() => {});
+      if (outputFile)
+        await documentStorage()
+          .remove(outputFile)
+          .catch(() => {});
       await this.failed(job, "REPORT_GENERATION_FAILED");
       throw error;
     }
@@ -383,7 +374,7 @@ export class ReportService implements OnModuleDestroy {
         "REPORT_SCOPE_CHANGED",
         "Visibilidade alterada; gere novamente o relatório",
       );
-    const bytes = await readFile(this.file(job.objectKey));
+    const bytes = await documentStorage().authorizedRead(job.objectKey,r.auth.tenantId);
     await recordAudit(
       this.db,
       r.auth,

@@ -1,0 +1,6 @@
+aws_region = "af-south-1"
+aws_account_id = ""
+state_bucket_name = ""
+owner = ""
+# Enable only if this account does not already have the GitHub OIDC provider.
+create_github_oidc_provider = false

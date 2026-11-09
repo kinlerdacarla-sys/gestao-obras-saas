@@ -1,3 +1,4 @@
+import { maintenanceActive } from "../../../../packages/domain/src/maintenance.js";
 import { CommercialPolicy } from "../saas/policy.js";
 import {
   CanActivate,
@@ -37,6 +38,19 @@ export class SessionGuard implements CanActivate {
       req.get("origin") !== configuration().WEB_ORIGIN
     )
       fail(403, "FORBIDDEN", "Origem inválida");
+    const path = req.path.toLowerCase();
+    if (
+      path.startsWith("/api/v1/") &&
+      !path.startsWith("/api/v1/platform/") &&
+      path !== "/api/v1/service-info" &&
+      !["GET", "HEAD", "OPTIONS"].includes(req.method)
+    ) {
+      const control = await this.db.platformControl.findUnique({
+        where: { key: "maintenance" },
+      });
+      if (maintenanceActive(control?.value))
+        fail(503, "MAINTENANCE_MODE", "Manutenção em curso; tente mais tarde");
+    }
     if (
       this.reflector.getAllAndOverride<boolean>("public", [
         context.getHandler(),

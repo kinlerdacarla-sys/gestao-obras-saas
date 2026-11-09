@@ -37,6 +37,7 @@ jobs:
       - name: Generate ephemeral signing key
         run: echo "JWT_SECRET=$(openssl rand -hex 48)" >> "$GITHUB_ENV"
       - run: npm ci
+      - run: npm audit --omit=dev --audit-level=critical
       - run: npm run generate
       - run: npm run migrate
       - run: npx prisma migrate status
@@ -94,3 +95,41 @@ jobs:
           test "$(docker inspect -f '{{.Config.User}}' obras-worker:${{ github.sha }})" = node
           test "$(docker inspect -f '{{.Config.User}}' obras-web:${{ github.sha }})" = node
           docker run --rm obras-api:${{ github.sha }} node -e "if(require('fs').existsSync('/app/node_modules/typescript')) process.exit(1)"
+
+      - name: Scan production runtimes for critical vulnerabilities
+        run: |
+          for name in api web worker; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-data:/root/.cache/trivy aquasec/trivy:0.76.2 image --scanners vuln --severity CRITICAL --exit-code 1 --no-progress "obras-$name:${{ github.sha }}"
+          done
+
+  launch-configuration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "1.17.1" }
+      - name: Verify rollback and gate logic without AWS
+        run: python -m unittest discover -s tests/release -v
+      - name: Offline Terraform validation (no AWS identity or remote backend)
+        run: |
+          terraform fmt -recursive -check infrastructure
+          for root in infrastructure/bootstrap infrastructure/environments/staging infrastructure/environments/production; do
+            terraform -chdir="$root" init -backend=false -input=false -lockfile=readonly
+            terraform -chdir="$root" validate
+          done
+      - name: Scan Git history without printing secrets
+        run: docker run --rm -w /repo -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e GIT_CONFIG_VALUE_0=/repo -v "$PWD:/repo:ro" ghcr.io/gitleaks/gitleaks:v8.30.1 git --redact --no-banner
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+      - name: S3-compatible persistence and signing checks (local credentials only)
+        env:
+          AWS_ACCESS_KEY_ID: local-validation
+          AWS_SECRET_ACCESS_KEY: isolated-storage-validation
+        run: |
+          docker compose -f infrastructure/docker/compose.s3-test.yml up -d --wait
+          npx vitest run tests/storage
+      - if: always()
+        run: docker compose -f infrastructure/docker/compose.s3-test.yml down

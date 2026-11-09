@@ -4,4 +4,6 @@
 
 SUPER_ADMIN consulta dashboard, `/platform/tenants`, pesquisa/paginação e detalhe com Overview, Subscription, Usage, Users, Projects, Audit e Support. Listas diagnósticas mostram até 100 utilizadores/obras e 50 eventos recentes; não são exportações completas. Suspender/reativar requer motivo e confirmação do identificador na UI. API regista tenant_status_events e platform_audit_logs na mesma transação. Fecho é terminal. Não há impersonação.
 
-Bootstrap inicial: no container migration executar `npx tsx scripts/bootstrap-platform.ts`, fornecendo PLATFORM_BOOTSTRAP_EMAIL, PLATFORM_BOOTSTRAP_NAME, PLATFORM_BOOTSTRAP_PASSWORD (mínimo 16 caracteres) e PLATFORM_BOOTSTRAP_REASON pelo secret store. O script exige uma identidade nova e recusa executar se já existir um SUPER_ADMIN ativo. Usa transação, lock global, Argon2 e auditoria PLATFORM_BOOTSTRAPPED. Nunca promove automaticamente admin@example.com. Não incluir valores em argumentos, histórico de shell ou Git. O MFA não é implementado na aplicação; aplicar proteção adicional de identidade no ingresso antes de lançamento.
+Bootstrap inicial: ver procedimento por convite em [production.md](production.md). O comando exige nome, email e motivo; recusa promover uma identidade de tenant ou criar outro Super Admin inicial.
+
+O bootstrap M9 apenas cria uma identidade INVITED e um convite cifrado com prazo de uma hora, entregue pelo worker. Confirmar a caixa, definir password e entrar pelo login de plataforma. Ver production.md.

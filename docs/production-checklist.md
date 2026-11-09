@@ -23,3 +23,16 @@ Preencher com responsável, evidência e data. Não marcar por inferência.
 - [ ] Suporte autorizado com motivo, banner, expiração e trilho auditável testados.
 - [ ] Termos/privacidade publicados e versionados; contactos de suporte/comercial definidos.
 - [ ] Quotas, direitos, suspensão, portabilidade e cobranças manuais confirmados comercialmente.
+
+## Gates AWS do piloto (todos requerem evidência externa)
+
+- [ ] Contas/SSO autorizados, tags de custo ativas e budget aprovado.
+- [ ] DNS delegado, ACM regional/global validado, ALB restrito, WAF testado com upload legítimo.
+- [ ] ECR imutável e scans aprovados, tasks ECS privadas e circuit breaker ensaiado.
+- [ ] S3 privado/versionado e restauro de objeto, Secrets Manager/KMS e rotação.
+- [ ] PITR RDS, snapshot pré-migration arriscada, restore isolado e integridade financeira.
+- [ ] SES com DKIM/SPF/DMARC, fora do sandbox e bounce/complaint verificados.
+- [ ] OIDC e reviewers reais; staging passou; autorização de produção independente.
+- [ ] CloudTrail, CloudWatch, SNS confirmado, synthetic e alarmes testados.
+- [ ] Admin convidado e verificado, tenant piloto, UAT, suporte, contactos e links legais.
+- [ ] Rollback exercitado, resposta a incidente e janela de observação atribuídos.

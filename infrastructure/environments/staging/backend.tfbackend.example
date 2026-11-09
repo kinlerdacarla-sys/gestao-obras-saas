@@ -1,0 +1,7 @@
+# Create/bootstrap and encrypt the state bucket first. No invented identifiers.
+bucket = ""
+key = "gestao-obras/staging/terraform.tfstate"
+region = "af-south-1"
+kms_key_id = ""
+encrypt = true
+use_lockfile = true

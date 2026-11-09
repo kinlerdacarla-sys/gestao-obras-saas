@@ -2600,7 +2600,32 @@ model InvitationDelivery {
   leaseUntil DateTime? @map("lease_until") @db.Timestamptz(6)
   expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
   createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  attempts   Int       @default(0)
+  lastErrorCode String? @map("last_error_code")
 
   @@index([sentAt, expiresAt])
   @@map("invitation_deliveries")
+}
+
+model PlatformInvitation {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  tokenHash String @unique @map("token_hash")
+  ciphertext String?
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  usedAt DateTime? @map("used_at") @db.Timestamptz(6)
+  sentAt DateTime? @map("sent_at") @db.Timestamptz(6)
+  leaseUntil DateTime? @map("lease_until") @db.Timestamptz(6)
+  attempts Int @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  @@index([sentAt, expiresAt])
+  @@map("platform_invitations")
+}
+
+model PlatformControl {
+  key String @id
+  value Json
+  version Int @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@map("platform_controls")
 }

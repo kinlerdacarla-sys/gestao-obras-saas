@@ -25,7 +25,7 @@ import {
   timingSafeEqual,
   randomUUID,
 } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { documentStorage } from "../../../../packages/config/src/storage.js";
 import path from "node:path";
 import type { z } from "zod";
 import type { ApiRequest } from "../auth/security.js";
@@ -245,15 +245,6 @@ export class DocumentService {
       : owner === "fundingAgreement"
         ? tx.fundingAgreement.findFirst({ where: { ...scope, id } })
         : tx.payment.findFirst({ where: { ...scope, id } });
-  }
-  private file(key: string) {
-    const base = path.resolve(
-        process.env.DOCUMENT_STORAGE_PATH ?? "work/document-storage",
-      ),
-      target = path.resolve(base, key);
-    if (!target.startsWith(base + path.sep))
-      fail(400, "ACCESS_DENIED", "Chave inválida");
-    return target;
   }
   async ticket(
     req: ApiRequest,
@@ -541,13 +532,15 @@ export class DocumentService {
             : "CONTRACT_IMMUTABLE",
         "Registo não editável",
       );
-    const target = this.file(document.objectKey);
-    await mkdir(path.dirname(target), { recursive: true });
     try {
-      await writeFile(target, file.buffer, { flag: "wx" });
+      await documentStorage().put(document.objectKey, file.buffer, {
+        exclusive: true,
+        temporary: true,
+        contentType: document.mimeType,
+      });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const existing = await readFile(target);
+      const existing = await documentStorage().read(document.objectKey, true);
       if (
         createHash("sha256").update(existing).digest("hex") !==
         document.checksum
@@ -588,7 +581,7 @@ export class DocumentService {
         fail(404, "PHOTO_NOT_FOUND", "Upload não encontrado ou expirado");
       let bytes: Buffer;
       try {
-        bytes = await readFile(this.file(document.objectKey));
+        bytes = await documentStorage().read(document.objectKey, true);
       } catch {
         return fail(400, "VALIDATION_ERROR", "Upload ainda não recebido");
       }
@@ -599,6 +592,11 @@ export class DocumentService {
         !fileSignature(bytes, document.mimeType)
       )
         fail(400, "VALIDATION_ERROR", "Conteúdo inválido");
+      await documentStorage().confirm(
+        document.objectKey,
+        bytes,
+        document.mimeType,
+      );
       await tx.document.update({
         where: { ...scope, id },
         data: { confirmedAt: new Date() },
@@ -662,7 +660,10 @@ export class DocumentService {
       fail(403, "ACCESS_DENIED", "Sem acesso ao ficheiro");
     if (qualityOwner(owner) && !maySeeFile(role, document.visibility))
       fail(403, "ACCESS_DENIED", "Sem acesso à evidência");
-    return { document, bytes: await readFile(this.file(document.objectKey)) };
+    return {
+      document,
+      bytes: await documentStorage().authorizedRead(document.objectKey,scope.tenantId),
+    };
   }
   async remove(
     req: ApiRequest,
