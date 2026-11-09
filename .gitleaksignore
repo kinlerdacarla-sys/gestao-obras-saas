@@ -4,3 +4,6 @@ c8b0f30a9a9db44b533039f355ffb337118789f5:docs/evidence/m3/source-manifest.json:g
 c8b0f30a9a9db44b533039f355ffb337118789f5:docs/evidence/m3/source-manifest.json:generic-api-key:14
 c8b0f30a9a9db44b533039f355ffb337118789f5:docs/evidence/m3/source-manifest.json:generic-api-key:32
 c8b0f30a9a9db44b533039f355ffb337118789f5:docs/evidence/m3/source-manifest.json:generic-api-key:79
+# Reviewed empty api_domain assignments in the original two tfvars templates; no rule/path allowlist.
+accb897090912a44c55c981e82b115a36bb1b569:infrastructure/environments/production/terraform.tfvars.example:generic-api-key:7
+accb897090912a44c55c981e82b115a36bb1b569:infrastructure/environments/staging/terraform.tfvars.example:generic-api-key:7
